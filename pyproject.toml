@@ -26,6 +26,9 @@ dev = ["build>=1.2", "pytest>=8"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_context_kit"]
 
+[tool.hatch.build.targets.wheel.shared-data]
+"skill/manage-ai-context" = "share/ai-context-kit/skill/manage-ai-context"
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
