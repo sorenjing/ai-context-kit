@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-context-kit"
+version = "0.1.0"
+description = "Offline shared context for AI coding tools"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "AI Context Kit contributors" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.scripts]
+aictx = "ai_context_kit.cli:entrypoint"
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_context_kit"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = ["-p", "no:cacheprovider"]
+
