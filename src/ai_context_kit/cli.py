@@ -13,6 +13,7 @@ from .facts import extract_facts
 from .render import MarkerError, render_project_memory, render_workspace, slugify
 from .state import (
     ProjectState,
+    StateError,
     WorkspaceState,
     _atomic_text,
     classify_projects,
@@ -65,11 +66,26 @@ def _root(value: Path | None, *, initializing: bool) -> Path:
 
 def _facts(root: Path):
     config = load_config(root)
-    return [extract_facts(project, config) for project in discover_projects(config)]
+    facts = [extract_facts(project, config) for project in discover_projects(config)]
+    identities: dict[str, str] = {}
+    for item in facts:
+        identity = slugify(item.project.name)
+        previous = identities.get(identity)
+        if previous is not None:
+            raise ConfigError(
+                f"project name collision: {previous} and {item.project.relative_path} both use {identity}.md"
+            )
+        identities[identity] = item.project.relative_path
+    return facts
+
+
+def _read_exact(path: Path) -> str:
+    with path.open("r", encoding="utf-8", newline="") as stream:
+        return stream.read()
 
 
 def _write_if_changed(path: Path, contents: str, *, dry_run: bool) -> bool:
-    existing = path.read_text(encoding="utf-8") if path.exists() else None
+    existing = _read_exact(path) if path.exists() else None
     if existing == contents:
         return False
     if not dry_run:
@@ -106,7 +122,7 @@ def _update(root: Path, selected: str | None, *, dry_run: bool) -> None:
         if item.project.name not in update_names:
             continue
         target = root / ".ai" / "projects" / f"{slugify(item.project.name)}.md"
-        existing = target.read_text(encoding="utf-8") if target.exists() else None
+        existing = _read_exact(target) if target.exists() else None
         rendered = render_project_memory(item, existing)
         _write_if_changed(target, rendered, dry_run=dry_run)
         fingerprint = fingerprint_facts(item)
@@ -144,19 +160,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "check":
             findings: list[str] = []
             facts = _facts(root)
+            try:
+                load_state(root, strict=True)
+            except StateError as exc:
+                findings.append(str(exc))
             for item in facts:
                 target = root / ".ai/projects" / f"{slugify(item.project.name)}.md"
                 if not target.exists():
                     findings.append(f"missing project memory: {target}")
                     continue
                 try:
-                    render_project_memory(item, target.read_text(encoding="utf-8"))
+                    render_project_memory(item, _read_exact(target))
                 except MarkerError as exc:
                     findings.append(f"marker error in {target}: {exc}")
-            for relative in render_adapters():
+            for relative, expected in render_adapters().items():
                 target = root / relative
                 if not target.exists():
                     findings.append(f"missing adapter: {relative}")
+                elif _read_exact(target) != expected:
+                    findings.append(f"adapter content mismatch: {relative}")
             if findings:
                 print("\n".join(findings))
                 return 1
@@ -170,4 +192,3 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def entrypoint() -> None:
     raise SystemExit(main())
-

@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from ai_context_kit.cli import main
 
 
@@ -65,3 +67,70 @@ def test_scan_does_not_create_context_files(tmp_path: Path, capsys) -> None:
 
     assert "demo" in capsys.readouterr().out
     assert not (tmp_path / ".ai").exists()
+
+
+def test_update_preserves_manual_block_bytes_with_crlf(tmp_path: Path) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    memory = tmp_path / ".ai/projects/demo.md"
+    contents = memory.read_bytes()
+    start = contents.index(b"<!-- aictx:manual:start -->") + len(b"<!-- aictx:manual:start -->")
+    end = contents.index(b"<!-- aictx:manual:end -->")
+    manual = b"\r\n## Decisions\r\n\r\nKeep mixed newlines.\n\xe4\xb8\xad\xe6\x96\x87\r\n"
+    memory.write_bytes(contents[:start] + manual + contents[end:])
+    manifest = tmp_path / "projects/demo/pyproject.toml"
+    manifest.write_text(manifest.read_text(encoding="utf-8") + "version='2'\n", encoding="utf-8")
+
+    assert main(["update", "--workspace", str(tmp_path)]) == 0
+
+    updated = memory.read_bytes()
+    new_start = updated.index(b"<!-- aictx:manual:start -->") + len(b"<!-- aictx:manual:start -->")
+    new_end = updated.index(b"<!-- aictx:manual:end -->")
+    assert updated[new_start:new_end] == manual
+
+
+@pytest.mark.parametrize("first,second", [("Same", "Same"), ("Foo Bar", "foo-bar")])
+def test_init_rejects_project_name_or_slug_collisions_before_memory_writes(
+    tmp_path: Path, first: str, second: str
+) -> None:
+    for path in ("projects/one", "projects/two"):
+        project = tmp_path / path
+        project.mkdir(parents=True)
+        (project / ".git").mkdir()
+    (tmp_path / ".aictx.toml").write_text(
+        f'''version = 1
+[projects]
+"projects/one" = "{first}"
+"projects/two" = "{second}"
+''',
+        encoding="utf-8",
+    )
+
+    assert main(["init", "--workspace", str(tmp_path)]) == 2
+
+    assert not list((tmp_path / ".ai/projects").glob("*.md"))
+
+
+@pytest.mark.parametrize("state", ["not json", '{"version": 99, "projects": {}}'])
+def test_check_reports_invalid_state_schema(tmp_path: Path, state: str, capsys) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    (tmp_path / ".ai/state.json").write_text(state, encoding="utf-8")
+
+    assert main(["check", "--workspace", str(tmp_path)]) == 1
+
+    assert "state" in capsys.readouterr().out.lower()
+
+
+def test_check_reports_modified_adapter_contents(tmp_path: Path, capsys) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    agents = tmp_path / "AGENTS.md"
+    agents.write_text(
+        agents.read_text(encoding="utf-8").replace(".ai/WORKSPACE.md", ".ai/MISSING.md"),
+        encoding="utf-8",
+    )
+
+    assert main(["check", "--workspace", str(tmp_path)]) == 1
+
+    assert "adapter" in capsys.readouterr().out.lower()
