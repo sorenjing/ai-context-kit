@@ -1,0 +1,49 @@
+"""Thin entry files for supported AI coding tools."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from .state import _atomic_text
+
+
+MANAGED = "<!-- aictx:managed -->"
+
+
+class ManagedFileError(ValueError):
+    """Raised instead of overwriting a user-owned entry file."""
+
+
+def _instructions(tool: str, *, cursor: bool = False) -> str:
+    frontmatter = "---\ndescription: Shared AI workspace context\nalwaysApply: true\n---\n" if cursor else ""
+    return frontmatter + f"""{MANAGED}
+# Shared context for {tool}
+
+Before broad repository analysis:
+
+1. Read `.ai/GLOBAL.md` and `.ai/WORKSPACE.md`.
+2. Load only the current project's `.ai/projects/<project>.md` file.
+3. Run `aictx status` and inspect source only when that project is stale or the task requires it.
+4. Preserve managed markers. Record semantic memory only inside the manual block.
+5. Store decisions and current state, not source copies or chat transcripts.
+"""
+
+
+def render_adapters() -> dict[Path, str]:
+    return {
+        Path("AGENTS.md"): _instructions("Codex"),
+        Path("CLAUDE.md"): _instructions("Claude"),
+        Path("GEMINI.md"): _instructions("Gemini"),
+        Path(".cursor/rules/ai-context.mdc"): _instructions("Cursor", cursor=True),
+    }
+
+
+def write_managed_file(path: Path, contents: str, *, dry_run: bool) -> bool:
+    existing = path.read_text(encoding="utf-8") if path.exists() else None
+    if existing is not None and MANAGED not in existing:
+        raise ManagedFileError(f"refusing to overwrite user-owned file: {path}")
+    if existing == contents:
+        return False
+    if not dry_run:
+        _atomic_text(path, contents)
+    return True
