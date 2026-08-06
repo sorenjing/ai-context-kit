@@ -1,10 +1,31 @@
 # AI Context Kit
 
-AI Context Kit is an offline CLI for sharing compact project context across Codex, Claude, Gemini, and Cursor. It discovers nested projects, extracts bounded metadata, detects stale context, and preserves human-written memory without calling a model API.
+[![CI](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## Why
+**One shared memory layer for every AI coding tool.**
 
-Opening the same repository in different AI tools often triggers the same expensive analysis. AI Context Kit keeps one version-controlled `.ai/` workspace with deterministic facts and small human-maintained summaries. Tool-specific instruction files remain thin pointers to that shared context.
+AI Context Kit keeps Codex, Claude, Gemini, and Cursor aligned when they work on the same workspace. It discovers nested projects, records only useful project facts, and tells you when context is stale—so switching tools does not mean analyzing the same codebase again.
+
+No model API. No cloud service. No vector database. Just a small, version-controlled `.ai/` directory that your tools can share.
+
+> If you use more than one AI coding assistant, this is the missing workspace layer between your projects and your prompts.
+
+## Why this exists
+
+AI assistants usually remember instructions at the project level, but your projects often live inside a larger workspace. That creates two kinds of waste:
+
+- every tool repeats the same repository discovery;
+- useful decisions stay trapped in one project folder or one assistant.
+
+AI Context Kit gives the whole workspace one source of truth. The CLI owns deterministic facts and freshness checks; you or your AI assistant own the short semantic memory that explains goals, decisions, constraints, and current state.
+
+## What you get
+
+- **One context store** shared by four AI tools through thin `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and Cursor entries.
+- **Incremental refresh** based on metadata fingerprints instead of a full re-analysis every time.
+- **Human-safe memory** with protected manual blocks that the CLI will not overwrite.
+- **Offline by default**: recognized manifests, bounded README text, Git metadata, and directory names only.
+- **Safe failure modes** for malformed markers, symlinked discovery roots, secret files, and project-name collisions.
 
 ## Install
 
