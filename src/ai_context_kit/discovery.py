@@ -27,12 +27,29 @@ def _relative(root: Path, path: Path) -> str:
     return value or "."
 
 
+def _contains_symlink(root: Path, candidate: Path) -> bool:
+    """Return whether any path component below *root* is a symlink."""
+    try:
+        parts = candidate.relative_to(root).parts
+    except ValueError:
+        return True
+    current = root
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            return True
+    return False
+
+
 def discover_projects(config: Config) -> list[Project]:
     """Find project roots below configured include paths without following links."""
     found: dict[str, Project] = {}
     root = config.root.resolve()
     for include in config.include:
-        start = (root / include).resolve()
+        candidate = root / include
+        if _contains_symlink(root, candidate):
+            continue
+        start = candidate.resolve()
         try:
             start.relative_to(root)
         except ValueError:
