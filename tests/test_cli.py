@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 
 import pytest
 
@@ -37,6 +38,17 @@ def test_status_reports_stale_after_manifest_change(tmp_path: Path, capsys) -> N
     assert main(["status", "--workspace", str(tmp_path)]) == 1
 
     assert "stale" in capsys.readouterr().out
+
+
+def test_update_prunes_projects_removed_from_discovery(tmp_path: Path, capsys) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+
+    shutil.rmtree(tmp_path / "projects" / "demo")
+
+    assert main(["update", "--workspace", str(tmp_path)]) == 0
+    assert main(["status", "--workspace", str(tmp_path)]) == 0
+    assert "missing" not in capsys.readouterr().out
 
 
 def test_dry_run_init_writes_nothing(tmp_path: Path) -> None:

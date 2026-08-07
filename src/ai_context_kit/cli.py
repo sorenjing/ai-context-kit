@@ -117,7 +117,10 @@ def _update(root: Path, selected: str | None, *, dry_run: bool) -> None:
         update_names = {item.project.name for item in facts}
 
     old_state = load_state(root)
-    new_projects = dict(old_state.projects)
+    current_names = {item.project.name for item in facts}
+    new_projects = {
+        name: state for name, state in old_state.projects.items() if name in current_names
+    }
     for item in facts:
         if item.project.name not in update_names:
             continue
