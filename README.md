@@ -31,9 +31,13 @@ AI Context Kit gives the whole workspace one source of truth. The CLI owns deter
 
 AI Context Kit requires Python 3.11 or newer.
 
+Before the first PyPI release, install directly from the repository:
+
 ```bash
-pipx install ai-context-kit
+pipx install git+https://github.com/sorenjing/ai-context-kit.git
 ```
+
+After a release is visible on PyPI, `pipx install ai-context-kit` becomes the preferred command. The repository currently prepares version 0.1.0 but does not claim it has already been published.
 
 For local development:
 
@@ -117,7 +121,7 @@ Copy or link `skill/manage-ai-context` into your Codex skills directory, then in
 AI Context Kit 在本地维护一套 `.ai/` 共享上下文，让 Codex、Claude、Gemini 和 Cursor 不必反复分析同一批项目。它不会调用模型 API，也不会读取普通源代码正文。
 
 ```powershell
-pipx install ai-context-kit
+pipx install git+https://github.com/sorenjing/ai-context-kit.git
 aictx init --dry-run
 aictx init
 aictx status
