@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-context-kit"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Offline shared context for AI coding tools"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,6 +28,9 @@ packages = ["src/ai_context_kit"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "skill/manage-ai-context" = "share/ai-context-kit/skill/manage-ai-context"
+
+[tool.hatch.version]
+path = "src/ai_context_kit/__init__.py"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

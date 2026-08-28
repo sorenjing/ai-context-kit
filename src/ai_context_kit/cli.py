@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from . import __version__
 from .adapters import ManagedFileError, render_adapters, write_managed_file
 from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
@@ -44,6 +45,7 @@ Record only short-lived cross-session state here. Clear it when the work is comp
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="aictx", description="Offline shared context for AI coding tools")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
     for name in ("init", "scan", "status", "check"):
         command = subparsers.add_parser(name)

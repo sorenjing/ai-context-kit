@@ -6,6 +6,14 @@ import pytest
 from ai_context_kit.cli import main
 
 
+def test_version_uses_package_version(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+
+    assert exc.value.code == 0
+    assert capsys.readouterr().out.strip() == "aictx 0.1.0"
+
+
 def make_workspace(root: Path) -> None:
     project = root / "projects" / "demo"
     project.mkdir(parents=True)
