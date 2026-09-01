@@ -27,6 +27,10 @@ AI Context Kit gives the whole workspace one source of truth. The CLI owns deter
 - **Offline by default**: recognized manifests, bounded README text, Git metadata, and directory names only.
 - **Safe failure modes** for malformed markers, symlinked discovery roots, secret files, and project-name collisions.
 
+## How it fits with agent skills
+
+AI Context Kit is the **shared context layer**. It can be used alongside reusable Agent Skills and repository-local rules without depending on either one. See [Agent Skills integration](docs/integrations/agent-skills.md) for the runtime composition and responsibility boundaries.
+
 ## Install
 
 AI Context Kit requires Python 3.11 or newer.
