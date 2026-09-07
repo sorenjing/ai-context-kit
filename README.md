@@ -2,27 +2,28 @@
 
 [![CI](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**One shared memory layer for every AI coding tool.**
+**Auditable project context shared across AI coding tools.**
 
-AI Context Kit keeps Codex, Claude, Gemini, and Cursor aligned when they work on the same workspace. It discovers nested projects, records only useful project facts, and tells you when context is stale—so switching tools does not mean analyzing the same codebase again.
+AI Context Kit maintains compact project observations that Codex, Claude, Gemini, and Cursor can read from the same workspace. It discovers nested projects, records facts from a bounded set of metadata, and detects when those observed inputs change.
 
-No model API. No cloud service. No vector database. Just a small, version-controlled `.ai/` directory that your tools can share.
+No model API, cloud service, or vector database is required. The result is a small, reviewable `.ai/` directory that can be version-controlled and shared.
 
-> If you use more than one AI coding assistant, this is the missing workspace layer between your projects and your prompts.
+The repository and its current files remain authoritative. AI Context Kit provides a reusable observation and memory layer; it does not replace source inspection or project rules.
 
 ## Why this exists
 
-AI assistants usually remember instructions at the project level, but your projects often live inside a larger workspace. That creates two kinds of waste:
+AI assistants usually keep instructions at the project level, while related projects often live in a larger workspace. That creates two kinds of waste:
 
 - every tool repeats the same repository discovery;
-- useful decisions stay trapped in one project folder or one assistant.
+- useful decisions stay trapped in one project folder or one assistant session.
 
-AI Context Kit gives the whole workspace one source of truth. The CLI owns deterministic facts and freshness checks; you or your AI assistant own the short semantic memory that explains goals, decisions, constraints, and current state.
+AI Context Kit gives the workspace one shared context entry point. The CLI owns deterministic observations and change detection; people and their assistants own the short semantic memory that explains goals, decisions, constraints, and current state.
 
 ## What you get
 
 - **One context store** shared by four AI tools through thin `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, and Cursor entries.
 - **Incremental refresh** based on metadata fingerprints instead of a full re-analysis every time.
+- **Auditable scope** recorded beside generated facts, so readers can see which bounded inputs were observed.
 - **Human-safe memory** with protected manual blocks that the CLI will not overwrite.
 - **Offline by default**: recognized manifests, bounded README text, Git metadata, and directory names only.
 - **Safe failure modes** for malformed markers, symlinked discovery roots, secret files, and project-name collisions.
@@ -88,13 +89,13 @@ Commands:
 
 - `aictx init`: create the workspace, adapters, and first project facts.
 - `aictx scan`: print discovered projects without writing context.
-- `aictx status`: report `new`, `stale`, `current`, or `missing` projects.
+- `aictx status`: report `new`, `stale`, `current`, or `missing` projects. `current` means the observed inputs match the last render; it does not guarantee that every project fact is complete or correct.
 - `aictx update [project]`: refresh all projects or one selected project.
 - `aictx check`: validate project-memory markers and adapter presence.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
 
-## Memory ownership
+## Context ownership
 
 Project files have two marked blocks. The CLI replaces only the automatic block:
 
@@ -112,7 +113,9 @@ Malformed markers are an error. An existing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md
 
 ## Privacy and limitations
 
-The CLI has no networking code and needs no API key. It reads recognized manifests, a bounded README excerpt, Git metadata, and directory names. It does not read ordinary source bodies, follow directory symlinks, or scan common secret files.
+The CLI has no networking code and needs no API key. It reads recognized manifests, a bounded README excerpt, Git metadata, and directory names. Each generated project file records this observation scope. The CLI does not read ordinary source bodies, follow directory symlinks, or scan common secret files.
+
+Freshness is deliberately narrow: `current` means these observed inputs have not changed since the last render. Source code or business behavior outside that scope may still require direct inspection.
 
 Version 0.1 deliberately has no model integration, vector database, daemon, hooks, JSON output, or automatic business-level summaries. The included Codex Skill teaches Codex to maintain the manual memory block after meaningful work.
 
@@ -140,4 +143,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues should follow [SECURITY.
 ## License
 
 MIT
-
