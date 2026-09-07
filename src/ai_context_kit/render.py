@@ -44,6 +44,20 @@ def _automatic(facts: ProjectFacts) -> str:
     if facts.commands:
         lines.extend(["", "### Commands", ""])
         lines.extend(f"- {name}: `{command}`" for name, command in facts.commands)
+    lines.extend(["", "## Observation scope", ""])
+    if facts.scanned_files:
+        sources = ", ".join(f"`{path.as_posix()}`" for path in facts.scanned_files)
+        lines.append(f"- Recognized metadata: {sources}")
+    else:
+        lines.append("- Recognized metadata: none")
+    lines.append("- Git metadata: branch, HEAD, and working-tree state")
+    lines.append("- Directory metadata: immediate child directory names")
+    lines.extend(
+        [
+            "",
+            "These detected facts cover only the inputs above; they are not a full source-code analysis.",
+        ]
+    )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -68,4 +82,3 @@ def render_workspace(facts: list[ProjectFacts]) -> str:
 def slugify(value: str) -> str:
     slug = "".join(character.lower() if character.isalnum() else "-" for character in value)
     return "-".join(part for part in slug.split("-") if part) or "project"
-
