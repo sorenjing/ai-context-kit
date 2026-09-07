@@ -38,6 +38,16 @@ Keep  trailing spaces.
     assert "npm run test: `vitest`" in rendered
 
 
+def test_render_project_memory_discloses_bounded_observation_scope() -> None:
+    rendered = render_project_memory(sample_facts())
+
+    assert "## Observation scope" in rendered
+    assert "Recognized metadata: `package.json`" in rendered
+    assert "Git metadata: branch, HEAD, and working-tree state" in rendered
+    assert "Directory metadata: immediate child directory names" in rendered
+    assert "not a full source-code analysis" in rendered
+
+
 @pytest.mark.parametrize(
     "existing",
     [
@@ -57,4 +67,3 @@ def test_workspace_render_is_deterministic_and_uses_posix_paths() -> None:
     assert "projects/demo" in rendered
     assert "Demo App" in rendered
     assert rendered == render_workspace([sample_facts()])
-
