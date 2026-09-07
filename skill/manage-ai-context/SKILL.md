@@ -5,7 +5,7 @@ description: Use when Codex needs to initialize, load, refresh, validate, or com
 
 # Manage AI Context
 
-Use `aictx` as the deterministic source of project discovery, metadata facts, and freshness. Keep one `.ai/` context store per workspace; keep AI-specific entry files thin.
+Use `aictx` for deterministic project discovery, bounded metadata observations, and observed-input change detection. Keep one `.ai/` context store per workspace and keep AI-specific entry files thin. Treat current repository files as authoritative.
 
 ## Choose the operation
 
@@ -28,12 +28,24 @@ After material architecture, dependency, build, test, or workflow changes:
 3. Update the manual block only when the change adds semantic knowledge not present in detected facts.
 4. Run `aictx check`.
 
+## Interpret freshness precisely
+
+`current` means only that the observed inputs recorded by AI Context Kit match the inputs used for the latest render. It is not a guarantee that the memory is complete or that unscanned source code has not changed.
+
+- `new`: the project is discovered but has no recorded render.
+- `stale`: one or more observed inputs changed.
+- `current`: the observed inputs match the recorded render.
+- `missing`: a previously recorded project is no longer discovered.
+
+Read the generated observation scope before relying on an automatic fact. Inspect current source files whenever the task depends on behavior outside that scope.
+
 ## Safety contract
 
 - Never create a separate memory hierarchy inside every project.
 - Never scan source bodies to manufacture summaries; inspect source only when the user's actual task requires it.
 - Never copy the same project facts into AGENTS.md, CLAUDE.md, GEMINI.md, or Cursor rules.
 - Never overwrite an unrecognized existing entry file or malformed managed block.
+- Never describe `current` as proof that the entire project or its behavior is up to date.
 - Use `--dry-run` before initializing or changing multiple files.
 - Keep the workflow offline; do not add model APIs, network services, databases, or background daemons.
 
