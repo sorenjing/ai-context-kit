@@ -109,6 +109,35 @@ def test_update_preserves_manual_block_bytes_with_crlf(tmp_path: Path) -> None:
     assert updated[new_start:new_end] == manual
 
 
+def test_export_chatgpt_project_context_pack_includes_shared_and_project_context(
+    tmp_path: Path, capsys
+) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    (tmp_path / ".ai/GLOBAL.md").write_text(
+        "# Global context\n\nUse concise Chinese by default.\n", encoding="utf-8"
+    )
+    memory = tmp_path / ".ai/projects/demo.md"
+    memory.write_text(
+        memory.read_text(encoding="utf-8").replace(
+            "Record goals, architecture decisions, constraints, current state, and known issues here.",
+            "Keep the public API offline-first.",
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["export", "chatgpt-project", "demo", "--workspace", str(tmp_path)]) == 0
+
+    exported = tmp_path / ".ai/exports/demo-chatgpt-project.md"
+    contents = exported.read_text(encoding="utf-8")
+    assert "# ChatGPT Project Context: demo" in contents
+    assert "Use concise Chinese by default." in contents
+    assert "Keep the public API offline-first." in contents
+    assert "https://learn.chatgpt.com/docs/projects" in contents
+    assert "https://learn.chatgpt.com/docs/customization/memories" in contents
+    assert "exported ChatGPT project context" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("first,second", [("Same", "Same"), ("Foo Bar", "foo-bar")])
 def test_init_rejects_project_name_or_slug_collisions_before_memory_writes(
     tmp_path: Path, first: str, second: str

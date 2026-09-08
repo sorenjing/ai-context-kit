@@ -11,7 +11,13 @@ from .adapters import ManagedFileError, render_adapters, write_managed_file
 from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
 from .facts import extract_facts
-from .render import MarkerError, render_project_memory, render_workspace, slugify
+from .render import (
+    MarkerError,
+    render_chatgpt_project_context,
+    render_project_memory,
+    render_workspace,
+    slugify,
+)
 from .state import (
     ProjectState,
     StateError,
@@ -56,6 +62,13 @@ def _parser() -> argparse.ArgumentParser:
     update.add_argument("project", nargs="?")
     update.add_argument("--workspace", type=Path)
     update.add_argument("--dry-run", action="store_true")
+    export = subparsers.add_parser(
+        "export", description="Create a portable context handoff for a supported target."
+    )
+    export.add_argument("target", choices=("chatgpt-project",))
+    export.add_argument("project")
+    export.add_argument("--workspace", type=Path)
+    export.add_argument("--output", type=Path)
     return parser
 
 
@@ -139,6 +152,30 @@ def _update(root: Path, selected: str | None, *, dry_run: bool) -> None:
         write_state(root, WorkspaceState(new_projects))
 
 
+def _select_project(root: Path, selected: str):
+    matching = [
+        item
+        for item in _facts(root)
+        if item.project.name == selected or slugify(item.project.name) == selected
+    ]
+    if not matching:
+        raise ConfigError(f"unknown project: {selected}")
+    return matching[0]
+
+
+def _export_chatgpt_project_context(root: Path, selected: str, output: Path | None) -> Path:
+    facts = _select_project(root, selected)
+    memory_path = root / ".ai" / "projects" / f"{slugify(facts.project.name)}.md"
+    global_path = root / ".ai" / "GLOBAL.md"
+    project_memory = _read_exact(memory_path) if memory_path.exists() else None
+    global_context = _read_exact(global_path) if global_path.exists() else None
+    destination = output or root / ".ai" / "exports" / f"{slugify(facts.project.name)}-chatgpt-project.md"
+    if not destination.is_absolute():
+        destination = root / destination
+    _atomic_text(destination, render_chatgpt_project_context(facts, project_memory, global_context))
+    return destination
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
@@ -189,6 +226,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return 1
             print("context is valid")
             return 0
+        if args.command == "export":
+            if args.target == "chatgpt-project":
+                destination = _export_chatgpt_project_context(root, args.project, args.output)
+                print(f"exported ChatGPT project context to {destination}")
+                return 0
     except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:
         print(f"error: {exc}")
         return 2
