@@ -92,8 +92,23 @@ Commands:
 - `aictx status`: report `new`, `stale`, `current`, or `missing` projects. `current` means the observed inputs match the last render; it does not guarantee that every project fact is complete or correct.
 - `aictx update [project]`: refresh all projects or one selected project.
 - `aictx check`: validate project-memory markers and adapter presence.
+- `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
+
+## Use with ChatGPT Projects
+
+AI Context Kit can generate a compact project handoff for ChatGPT Projects:
+
+```bash
+aictx export chatgpt-project my-project
+```
+
+The command writes `.ai/exports/my-project-chatgpt-project.md`. Upload that file to the matching ChatGPT Project as a source, then start task-specific chats inside the Project. Regenerate and replace the upload after meaningful project changes.
+
+The export combines bounded automatic facts, the selected project's managed semantic memory, and `GLOBAL.md`. It is a portable context file, not a way to read, write, or synchronize ChatGPT saved memory. Keep the workspace and its repository files as the source of truth, and do not upload secrets or private material that should stay outside ChatGPT.
+
+ChatGPT Projects organize shared chats, files, instructions, and sources; ChatGPT saved memory is a separate recall layer. See the official documentation for [Projects](https://learn.chatgpt.com/docs/projects) and [Memories](https://learn.chatgpt.com/docs/customization/memories).
 
 ## Context ownership
 
