@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Sequence
 
@@ -11,6 +12,7 @@ from .adapters import ManagedFileError, render_adapters, write_managed_file
 from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
 from .facts import extract_facts
+from .harness_export import build_harness_bundle
 from .render import (
     MarkerError,
     render_chatgpt_project_context,
@@ -65,10 +67,11 @@ def _parser() -> argparse.ArgumentParser:
     export = subparsers.add_parser(
         "export", description="Create a portable context handoff for a supported target."
     )
-    export.add_argument("target", choices=("chatgpt-project",))
+    export.add_argument("target", choices=("chatgpt-project", "harness"))
     export.add_argument("project")
     export.add_argument("--workspace", type=Path)
     export.add_argument("--output", type=Path)
+    export.add_argument("--format")
     return parser
 
 
@@ -176,6 +179,17 @@ def _export_chatgpt_project_context(root: Path, selected: str, output: Path | No
     return destination
 
 
+def _export_harness_context(root: Path, selected: str, output: Path | None) -> None:
+    bundle = build_harness_bundle(root, selected)
+    rendered = json.dumps(bundle, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    if output is None or str(output) == "-":
+        print(rendered, end="")
+        return
+    destination = output if output.is_absolute() else root / output
+    _atomic_text(destination, rendered)
+    print(f"exported harness context to {destination}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
@@ -230,6 +244,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.target == "chatgpt-project":
                 destination = _export_chatgpt_project_context(root, args.project, args.output)
                 print(f"exported ChatGPT project context to {destination}")
+                return 0
+            if args.target == "harness":
+                if args.format != "json":
+                    raise ConfigError("harness export requires --format json")
+                _export_harness_context(root, args.project, args.output)
                 return 0
     except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:
         print(f"error: {exc}")

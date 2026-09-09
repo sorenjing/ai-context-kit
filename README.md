@@ -93,6 +93,7 @@ Commands:
 - `aictx update [project]`: refresh all projects or one selected project.
 - `aictx check`: validate project-memory markers and adapter presence.
 - `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
+- `aictx export harness <project> --format json --output -`: print a versioned, local `ContextBundle v1` for an AI development harness.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
 
@@ -109,6 +110,16 @@ The command writes `.ai/exports/my-project-chatgpt-project.md`. Upload that file
 The export combines bounded automatic facts, the selected project's managed semantic memory, and `GLOBAL.md`. It is a portable context file, not a way to read, write, or synchronize ChatGPT saved memory. Keep the workspace and its repository files as the source of truth, and do not upload secrets or private material that should stay outside ChatGPT.
 
 ChatGPT Projects organize shared chats, files, instructions, and sources; ChatGPT saved memory is a separate recall layer. See the official documentation for [Projects](https://learn.chatgpt.com/docs/projects) and [Memories](https://learn.chatgpt.com/docs/customization/memories).
+
+## Use with EvolveTrace
+
+EvolveTrace consumes a stable JSON handoff rather than AI Context Kit internals or human-facing Markdown:
+
+```bash
+aictx export harness my-project --format json --output -
+```
+
+The command emits `context-bundle/v1` with the selected project, generation time, freshness state, bounded observation scope, workspace-relative repository identifier, and automatic/manual/shared context. It performs no network requests and does not mutate the workspace when `--output -` is used.
 
 ## Context ownership
 
@@ -132,7 +143,7 @@ The CLI has no networking code and needs no API key. It reads recognized manifes
 
 Freshness is deliberately narrow: `current` means these observed inputs have not changed since the last render. Source code or business behavior outside that scope may still require direct inspection.
 
-Version 0.1 deliberately has no model integration, vector database, daemon, hooks, JSON output, or automatic business-level summaries. The included Codex Skill teaches Codex to maintain the manual memory block after meaningful work.
+Version 0.1 deliberately has no model integration, vector database, daemon, hooks, or automatic business-level summaries. Its only JSON handoff is the explicit local `ContextBundle v1` export for harness integration. The included Codex Skill teaches Codex to maintain the manual memory block after meaningful work.
 
 ## Install the Codex Skill
 
