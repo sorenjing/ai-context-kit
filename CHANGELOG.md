@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added a standard AI Context Kit plugin manifest.
+- Moved `manage-ai-context` to the canonical `skills/` directory and kept it in Python package artifacts.
+- Documented the staged path from the local plugin to a GitHub-backed web MVP and optional remote MCP synchronization.
+
 All notable changes to AI Context Kit are documented here. The project follows semantic versioning after the first published release.
 
 ## 0.1.0 - Unreleased
@@ -24,4 +30,3 @@ All notable changes to AI Context Kit are documented here. The project follows s
 
 - Human-readable CLI output only; JSON output is not part of version 0.1.
 - PyPI publication and external adoption evidence have not been completed.
-

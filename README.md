@@ -32,6 +32,12 @@ AI Context Kit gives the workspace one shared context entry point. The CLI owns 
 
 AI Context Kit is the **shared context layer**. It can be used alongside reusable Agent Skills and repository-local rules without depending on either one. See [Agent Skills integration](docs/integrations/agent-skills.md) for the runtime composition and responsibility boundaries.
 
+## Plugin status
+
+The repository now contains a standard plugin manifest and exposes `manage-ai-context` from the canonical `skills/` directory. The Stage 1 plugin packages workflow guidance around the local `aictx` CLI; it does not claim that a ChatGPT web session can read files from your computer.
+
+Web access requires an explicitly synchronized context source and a deployable MCP service. The recommended path is a read-only GitHub-backed MVP before any hosted synchronization service. See [Plugin architecture and web roadmap](docs/plugin-architecture.md) for the component boundaries, capability matrix, and delivery stages.
+
 ## Install
 
 AI Context Kit requires Python 3.11 or newer.
@@ -147,7 +153,7 @@ Version 0.1 deliberately has no model integration, vector database, daemon, hook
 
 ## Install the Codex Skill
 
-Copy or link `skill/manage-ai-context` into your Codex skills directory, then invoke `$manage-ai-context`. The Skill delegates deterministic work to the installed `aictx` command.
+Install the repository as a plugin, or copy/link `skills/manage-ai-context` into your Codex skills directory, then invoke `$manage-ai-context`. The Skill delegates deterministic work to the installed `aictx` command. The `aictx` Python package remains a separate runtime dependency.
 
 ## 中文快速开始
 

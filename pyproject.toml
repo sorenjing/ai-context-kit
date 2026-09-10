@@ -27,7 +27,7 @@ dev = ["build>=1.2", "pytest>=8"]
 packages = ["src/ai_context_kit"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"skill/manage-ai-context" = "share/ai-context-kit/skill/manage-ai-context"
+"skills/manage-ai-context" = "share/ai-context-kit/skills/manage-ai-context"
 
 [tool.hatch.version]
 path = "src/ai_context_kit/__init__.py"
@@ -36,4 +36,3 @@ path = "src/ai_context_kit/__init__.py"
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = ["-p", "no:cacheprovider"]
-

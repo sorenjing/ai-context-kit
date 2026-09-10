@@ -1,7 +1,9 @@
+import json
 from pathlib import Path
 
 
-SKILL = Path(__file__).parents[1] / "skill" / "manage-ai-context"
+ROOT = Path(__file__).parents[1]
+SKILL = ROOT / "skills" / "manage-ai-context"
 
 
 def test_skill_has_valid_trigger_and_cli_workflow() -> None:
@@ -18,3 +20,28 @@ def test_skill_has_codex_interface_metadata() -> None:
 
     assert 'display_name: "Manage AI Context"' in metadata
     assert "$manage-ai-context" in metadata
+
+
+def test_plugin_manifest_exposes_the_standard_skill_directory() -> None:
+    manifest = json.loads(
+        (ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+    )
+
+    assert manifest["name"] == "ai-context-kit"
+    assert manifest["version"] == "0.1.0"
+    assert manifest["skills"] == "./skills/"
+    assert manifest["repository"] == "https://github.com/sorenjing/ai-context-kit"
+    assert manifest["interface"]["displayName"] == "AI Context Kit"
+    assert "mcpServers" not in manifest
+    assert "apps" not in manifest
+
+
+def test_plugin_has_one_canonical_skill_location() -> None:
+    assert SKILL.is_dir()
+    assert not (ROOT / "skill").exists()
+
+
+def test_python_package_includes_the_canonical_skill() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert '"skills/manage-ai-context" = "share/ai-context-kit/skills/manage-ai-context"' in pyproject
