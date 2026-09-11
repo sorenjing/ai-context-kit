@@ -53,6 +53,10 @@ Environment variables:
 | `AICTX_GITHUB_REF` | no | `main` | Branch, tag, or commit ref |
 | `AICTX_GITHUB_PATH` | no | `.ai-context` | Fixed publication directory |
 | `GITHUB_TOKEN` | private repos only | none | Read-only GitHub credential |
+| `AICTX_GITHUB_TIMEOUT` | no | `10` | GitHub request timeout in seconds |
+| `AICTX_MAX_RESPONSE_BYTES` | no | `2097152` | Maximum encoded GitHub response body |
+| `AICTX_MAX_IN_FLIGHT` | no | `32` | Concurrent GitHub reads per worker process |
+| `AICTX_ACQUIRE_TIMEOUT` | no | `0.25` | Wait for a request slot before returning busy |
 | `HOST` | no | `127.0.0.1` | Bind address; container sets `0.0.0.0` |
 | `PORT` | no | `8000` | HTTP port |
 
@@ -77,3 +81,5 @@ Root `mcp.json` and `.app.json` are deployment-specific files. Add them after th
 | `get_freshness` | Bundle timestamp, label, and observed scope | Claim source code is fully current |
 
 All tools are read-only. Project lookup is exact, bundle paths must live below `projects/`, and the bundle identity must match the requested project.
+
+See [Runtime concurrency and process model](runtime-concurrency.md) before changing worker count or concurrency limits.

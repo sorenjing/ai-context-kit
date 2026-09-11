@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from ai_context_kit.mcp_server import _store_from_environment, create_server
+from ai_context_kit.mcp_server import InFlightLimit, _store_from_environment, create_server
 
 
 def test_store_configuration_comes_from_explicit_environment(monkeypatch) -> None:
@@ -34,3 +34,12 @@ def test_server_uses_current_mcp_sdk() -> None:
     tools = asyncio.run(create_server().list_tools())
     assert [tool.name for tool in tools] == ["list_projects", "get_context", "get_freshness"]
     assert all(tool.annotations.read_only_hint for tool in tools)
+
+
+def test_in_flight_limit_rejects_excess_work_instead_of_waiting_forever() -> None:
+    limit = InFlightLimit(maximum=1, timeout=0.01)
+
+    with limit.slot():
+        with pytest.raises(RuntimeError, match="busy"):
+            with limit.slot():
+                pytest.fail("request exceeded the in-flight limit")

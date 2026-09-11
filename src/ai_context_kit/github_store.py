@@ -25,6 +25,7 @@ class GitHubBundleStore:
         base_path: str = ".ai-context",
         token: str | None = None,
         timeout: int = 10,
+        max_response_bytes: int = 2 * 1024 * 1024,
         opener: Callable = urlopen,
     ) -> None:
         parts = repository.split("/")
@@ -37,6 +38,9 @@ class GitHubBundleStore:
         self.base_path = base_path.strip("/")
         self.token = token
         self.timeout = timeout
+        if max_response_bytes < 1:
+            raise BundleStoreError("max_response_bytes must be positive")
+        self.max_response_bytes = max_response_bytes
         self.opener = opener
 
     def _read_json(self, relative_path: str) -> dict[str, object]:
@@ -50,7 +54,12 @@ class GitHubBundleStore:
             headers["Authorization"] = f"Bearer {self.token}"
         try:
             with self.opener(Request(url, headers=headers), timeout=self.timeout) as response:
-                envelope = json.loads(response.read())
+                raw = response.read(self.max_response_bytes + 1)
+            if len(raw) > self.max_response_bytes:
+                raise BundleStoreError(
+                    f"GitHub response exceeds {self.max_response_bytes} bytes"
+                )
+            envelope = json.loads(raw)
             if envelope.get("encoding") != "base64" or not isinstance(envelope.get("content"), str):
                 raise BundleStoreError(f"unexpected GitHub response for {relative_path}")
             return json.loads(base64.b64decode(envelope["content"]).decode("utf-8"))
@@ -93,4 +102,3 @@ class GitHubBundleStore:
             "generated_at": bundle.get("generated_at"),
             "observed_scope": bundle.get("observed_scope", []),
         }
-

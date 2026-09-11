@@ -25,6 +25,7 @@ AI Context Kit gives the workspace one shared context entry point. The CLI owns 
 - **Incremental refresh** based on metadata fingerprints instead of a full re-analysis every time.
 - **Auditable scope** recorded beside generated facts, so readers can see which bounded inputs were observed.
 - **Human-safe memory** with protected manual blocks that the CLI will not overwrite.
+- **Cross-process write safety** so concurrent terminals or agents do not lose workspace updates.
 - **Offline by default**: recognized manifests, bounded README text, Git metadata, and directory names only.
 - **Safe failure modes** for malformed markers, symlinked discovery roots, secret files, and project-name collisions.
 
@@ -37,6 +38,8 @@ AI Context Kit is the **shared context layer**. It can be used alongside reusabl
 The standard plugin package exposes `manage-ai-context` from the canonical `skills/` directory and delegates deterministic local work to the `aictx` CLI.
 
 For ChatGPT web access, the repository includes a read-only GitHub-backed MCP server and container deployment. Exported context becomes available after the reviewed publication tree is committed to GitHub and the MCP server is deployed at a stable HTTPS URL. See [GitHub-backed web MVP](docs/github-web-mvp.md) for setup and [Plugin architecture](docs/plugin-architecture.md) for the wider design.
+
+Local writers and the remote reader use different resource controls. See [Runtime concurrency and process model](docs/runtime-concurrency.md) for file locking, atomic replacement, MCP backpressure, multi-worker sizing, and failure guarantees.
 
 ## Install
 

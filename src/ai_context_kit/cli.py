@@ -13,6 +13,7 @@ from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
 from .facts import extract_facts
 from .harness_export import build_harness_bundle
+from .locking import workspace_write_lock
 from .publish import publish_bundle
 from .render import (
     MarkerError,
@@ -203,9 +204,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         root = _root(args.workspace, initializing=args.command == "init")
         if args.command == "init":
-            _initialize(root, dry_run=args.dry_run)
-            if not args.dry_run:
-                _update(root, None, dry_run=False)
+            if args.dry_run:
+                _initialize(root, dry_run=True)
+            else:
+                with workspace_write_lock(root):
+                    _initialize(root, dry_run=False)
+                    _update(root, None, dry_run=False)
             print(f"initialized {root}")
             return 0
         if args.command == "scan":
@@ -218,7 +222,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"{status}\t{name}")
             return 1 if any(status != "current" for status in statuses.values()) else 0
         if args.command == "update":
-            _update(root, args.project, dry_run=args.dry_run)
+            if args.dry_run:
+                _update(root, args.project, dry_run=True)
+            else:
+                with workspace_write_lock(root):
+                    _update(root, args.project, dry_run=False)
             print("dry run complete" if args.dry_run else "context updated")
             return 0
         if args.command == "check":
@@ -262,7 +270,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             destination = args.output or root / ".ai" / "published"
             if not destination.is_absolute():
                 destination = root / destination
-            output = publish_bundle(root, args.project, destination)
+            with workspace_write_lock(root):
+                output = publish_bundle(root, args.project, destination)
             print(f"published {output}; review and commit the directory to GitHub")
             return 0
     except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:

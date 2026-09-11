@@ -16,8 +16,9 @@ class FakeResponse:
     def __exit__(self, *args):
         return None
 
-    def read(self) -> bytes:
-        return json.dumps(self.payload).encode()
+    def read(self, size: int = -1) -> bytes:
+        data = json.dumps(self.payload).encode()
+        return data if size < 0 else data[:size]
 
 
 def encoded(value: object) -> dict[str, str]:
@@ -77,4 +78,15 @@ def test_invalid_index_schema_is_rejected() -> None:
     )
 
     with pytest.raises(BundleStoreError, match="index schema"):
+        store.list_projects()
+
+
+def test_response_larger_than_configured_limit_is_rejected() -> None:
+    store = GitHubBundleStore(
+        "owner/context",
+        max_response_bytes=20,
+        opener=lambda *_args, **_kwargs: FakeResponse({"content": "x" * 100}),
+    )
+
+    with pytest.raises(BundleStoreError, match="response exceeds 20 bytes"):
         store.list_projects()

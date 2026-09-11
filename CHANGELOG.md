@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Serialize mutating CLI commands with a cross-platform workspace file lock.
+- Bound MCP in-flight GitHub reads, request duration, and response size.
+- Document the local process model, multi-worker sizing, and failure guarantees.
+
 ## 0.2.0 - Unreleased
 
 - Add deterministic, review-before-commit GitHub publication bundles and index.

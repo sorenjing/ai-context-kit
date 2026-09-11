@@ -2,9 +2,31 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import os
+import threading
+from typing import Iterator
 
 from .github_store import GitHubBundleStore
+
+
+class InFlightLimit:
+    """Bound concurrent remote reads within one MCP worker process."""
+
+    def __init__(self, maximum: int, timeout: float) -> None:
+        if maximum < 1 or timeout < 0:
+            raise ValueError("in-flight limit must be positive and timeout non-negative")
+        self._semaphore = threading.BoundedSemaphore(maximum)
+        self.timeout = timeout
+
+    @contextmanager
+    def slot(self) -> Iterator[None]:
+        if not self._semaphore.acquire(timeout=self.timeout):
+            raise RuntimeError("AI Context Kit is busy; retry shortly")
+        try:
+            yield
+        finally:
+            self._semaphore.release()
 
 
 def _store_from_environment() -> GitHubBundleStore:
@@ -16,6 +38,10 @@ def _store_from_environment() -> GitHubBundleStore:
         ref=os.environ.get("AICTX_GITHUB_REF", "main"),
         base_path=os.environ.get("AICTX_GITHUB_PATH", ".ai-context"),
         token=os.environ.get("GITHUB_TOKEN"),
+        timeout=int(os.environ.get("AICTX_GITHUB_TIMEOUT", "10")),
+        max_response_bytes=int(
+            os.environ.get("AICTX_MAX_RESPONSE_BYTES", str(2 * 1024 * 1024))
+        ),
     )
 
 
@@ -29,21 +55,28 @@ def create_server():
             "treating context as current; repository source files remain authoritative."
         ),
     )
+    limit = InFlightLimit(
+        maximum=int(os.environ.get("AICTX_MAX_IN_FLIGHT", "32")),
+        timeout=float(os.environ.get("AICTX_ACQUIRE_TIMEOUT", "0.25")),
+    )
 
     @server.tool(annotations={"readOnlyHint": True, "openWorldHint": True})
     def list_projects() -> list[dict[str, object]]:
         """List projects explicitly published for remote context access."""
-        return _store_from_environment().list_projects()
+        with limit.slot():
+            return _store_from_environment().list_projects()
 
     @server.tool(annotations={"readOnlyHint": True, "openWorldHint": True})
     def get_context(project: str) -> dict[str, object]:
         """Get the automatic, manual, and global context for one exact project name."""
-        return _store_from_environment().get_context(project)
+        with limit.slot():
+            return _store_from_environment().get_context(project)
 
     @server.tool(annotations={"readOnlyHint": True, "openWorldHint": True})
     def get_freshness(project: str) -> dict[str, object]:
         """Get export time, freshness label, and bounded observation scope for a project."""
-        return _store_from_environment().get_freshness(project)
+        with limit.slot():
+            return _store_from_environment().get_freshness(project)
 
     return server
 
