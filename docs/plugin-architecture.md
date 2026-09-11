@@ -32,7 +32,7 @@ flowchart TD
     K --> C
 ```
 
-The repository implements the local CLI, portable plugin manifest, publication format, and read-only MCP server. A root `mcp.json` is intentionally withheld until a real stable HTTPS deployment URL exists; `mcp.example.json` documents the final mapping without pretending that hosting is already active.
+The repository implements the local CLI, portable plugin manifest, publication format, and read-only MCP server. `mcp.example.json` documents the deployment mapping; a root `mcp.json` requires the stable HTTPS URL of a live MCP deployment.
 
 ## Delivery stages
 
@@ -46,11 +46,11 @@ Success criteria:
 - the Skill has one canonical source location;
 - Python wheels contain that canonical Skill;
 - existing CLI tests and builds remain green;
-- documentation does not claim that web sessions can access local files.
+- documentation keeps local and web-access boundaries explicit.
 
 ### Stage 2: GitHub-backed web MVP (source complete; deployment required)
 
-The CLI exports a deliberately bounded and reviewable `ContextBundle v1`. A user explicitly publishes selected bundles to a GitHub repository or branch. A plugin dependency or thin MCP server retrieves those bundles for ChatGPT.
+The CLI exports a bounded and reviewable `ContextBundle v1`. A user explicitly publishes selected bundles to a GitHub repository or branch. A plugin dependency or thin MCP server retrieves those bundles for ChatGPT.
 
 Recommended read-only tools:
 
@@ -72,7 +72,7 @@ This stage must preserve:
 - least-privilege access;
 - visible bundle provenance and version;
 - deletion and export controls;
-- no claim of real-time freshness without a successful sync;
+- freshness status tied to the latest successful synchronization;
 - no implicit access to ChatGPT saved memory.
 
 ## Current capability matrix
