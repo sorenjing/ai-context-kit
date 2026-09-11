@@ -32,7 +32,7 @@ flowchart TD
     K --> C
 ```
 
-The diagram shows the target, not the current release. The plugin currently contains the Skill only. No MCP server is declared until a real, deployable implementation exists.
+The repository implements the local CLI, portable plugin manifest, publication format, and read-only MCP server. A root `mcp.json` is intentionally withheld until a real stable HTTPS deployment URL exists; `mcp.example.json` documents the final mapping without pretending that hosting is already active.
 
 ## Delivery stages
 
@@ -48,7 +48,7 @@ Success criteria:
 - existing CLI tests and builds remain green;
 - documentation does not claim that web sessions can access local files.
 
-### Stage 2: GitHub-backed web MVP
+### Stage 2: GitHub-backed web MVP (source complete; deployment required)
 
 The CLI exports a deliberately bounded and reviewable `ContextBundle v1`. A user explicitly publishes selected bundles to a GitHub repository or branch. A plugin dependency or thin MCP server retrieves those bundles for ChatGPT.
 
@@ -60,7 +60,7 @@ Recommended read-only tools:
 | `get_context` | The selected project's shared, automatic, and manual context |
 | `get_freshness` | Export-time freshness and observation scope |
 
-Writes stay out of the first web MVP. Publishing remains an explicit CLI action so private source, secret files, and unreviewed local memory cannot be uploaded accidentally.
+Writes stay out of the first web MVP. `aictx publish github` creates a reviewable local directory and performs no GitHub mutation. The MCP server reads only the configured repository, index, and declared project bundle paths. See [the deployment guide](github-web-mvp.md).
 
 ### Stage 3: optional remote synchronization
 
@@ -77,7 +77,7 @@ This stage must preserve:
 
 ## Current capability matrix
 
-| Capability | Stage 1 status |
+| Capability | Status |
 |---|---|
 | Install and run the local CLI | Available |
 | Invoke the bundled manage-context Skill | Available after plugin/Skill installation |
@@ -85,10 +85,11 @@ This stage must preserve:
 | Export a ChatGPT Project handoff | Available; upload remains manual |
 | Export `ContextBundle v1` for a harness | Available |
 | Read local `.ai/` files directly from ChatGPT web | Not available |
-| Retrieve synchronized context through MCP | Planned |
+| Prepare reviewable GitHub publication tree | Available |
+| Run read-only GitHub-backed MCP locally or in a container | Available |
+| Retrieve context from ChatGPT through MCP | Requires a user-provided stable HTTPS deployment and ChatGPT registration |
 | Synchronize ChatGPT saved memory | Out of scope |
 
 ## Why this split
 
 Keeping collection local makes observation deterministic and auditable. Keeping the Skill thin avoids duplicating CLI behavior in prompts. Adding remote access only behind an explicit exported bundle gives web clients useful context without turning AI Context Kit into an unrestricted source-code crawler or prematurely operating a multi-tenant storage service.
-

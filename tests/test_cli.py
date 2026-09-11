@@ -11,7 +11,7 @@ def test_version_uses_package_version(capsys) -> None:
         main(["--version"])
 
     assert exc.value.code == 0
-    assert capsys.readouterr().out.strip() == "aictx 0.1.0"
+    assert capsys.readouterr().out.strip() == "aictx 0.2.0"
 
 
 def make_workspace(root: Path) -> None:
@@ -183,3 +183,15 @@ def test_check_reports_modified_adapter_contents(tmp_path: Path, capsys) -> None
     assert main(["check", "--workspace", str(tmp_path)]) == 1
 
     assert "adapter" in capsys.readouterr().out.lower()
+
+
+def test_publish_github_creates_commit_ready_directory(tmp_path: Path, capsys) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    assert main(["publish", "github", "demo", "--workspace", str(tmp_path)]) == 0
+
+    assert (tmp_path / ".ai/published/index.json").exists()
+    assert (tmp_path / ".ai/published/projects/demo.json").exists()
+    assert "review and commit" in capsys.readouterr().out

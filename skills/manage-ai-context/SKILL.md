@@ -1,6 +1,6 @@
 ---
 name: manage-ai-context
-description: Use when Codex needs to initialize, load, refresh, validate, or compact offline shared project memory across nested repositories, especially with AGENTS.md, CLAUDE.md, GEMINI.md, Cursor rules, `.ai` workspaces, repeated repository analysis, stale context, or project switching.
+description: Use when Codex needs to initialize, load, refresh, validate, compact, or explicitly publish shared project memory across nested repositories, especially with AGENTS.md, CLAUDE.md, GEMINI.md, Cursor rules, `.ai` workspaces, repeated repository analysis, stale context, project switching, or GitHub-backed ChatGPT access.
 ---
 
 # Manage AI Context
@@ -16,6 +16,7 @@ Use `aictx` for deterministic project discovery, bounded metadata observations, 
 | A project is new or stale | Run `aictx update <project> --dry-run`, review, then apply |
 | Markers or entry files seem damaged | Run `aictx check`; do not repair by overwriting |
 | Memory is verbose or outdated | Compact only the manual block; preserve decisions, constraints, commands, current state, and known issues |
+| The user requests remote or ChatGPT web access | Run `aictx publish github <project>`, have the user review the generated files, and publish only after explicit authorization |
 
 ## Maintain semantic memory
 
@@ -47,6 +48,8 @@ Read the generated observation scope before relying on an automatic fact. Inspec
 - Never overwrite an unrecognized existing entry file or malformed managed block.
 - Never describe `current` as proof that the entire project or its behavior is up to date.
 - Use `--dry-run` before initializing or changing multiple files.
-- Keep the workflow offline; do not add model APIs, network services, databases, or background daemons.
+- Keep collection and updates offline by default. `publish` writes a local review directory only; it never pushes to GitHub.
+- Never publish implicitly. Treat the generated bundle as potentially sensitive, require review, and use a dedicated repository or branch with the narrowest suitable access.
+- Remote MCP reads only bundle paths declared in the published index. Do not use it as a general repository browser.
 
 If `aictx` is unavailable, report that dependency and provide the repository installation command. Do not recreate its update logic ad hoc.

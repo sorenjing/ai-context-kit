@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ai-context-kit",
+  "version": "0.2.0",
+  "description": "Auditable project context shared across AI coding tools",
+  "author": {
+    "name": "sorenjing",
+    "url": "https://github.com/sorenjing"
+  },
+  "homepage": "https://github.com/sorenjing/ai-context-kit#readme",
+  "repository": "https://github.com/sorenjing/ai-context-kit",
+  "license": "MIT",
+  "keywords": ["context", "memory", "codex", "chatgpt", "agent-skills"]
+}

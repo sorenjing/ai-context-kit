@@ -28,12 +28,20 @@ def test_plugin_manifest_exposes_the_standard_skill_directory() -> None:
     )
 
     assert manifest["name"] == "ai-context-kit"
-    assert manifest["version"] == "0.1.0"
+    assert manifest["version"] == "0.2.0"
     assert manifest["skills"] == "./skills/"
     assert manifest["repository"] == "https://github.com/sorenjing/ai-context-kit"
     assert manifest["interface"]["displayName"] == "AI Context Kit"
     assert "mcpServers" not in manifest
     assert "apps" not in manifest
+
+
+def test_portable_plugin_manifest_is_canonical() -> None:
+    manifest = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+
+    assert manifest["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+    assert manifest["name"] == "ai-context-kit"
+    assert (ROOT / "skills/manage-ai-context/SKILL.md").exists()
 
 
 def test_plugin_has_one_canonical_skill_location() -> None:

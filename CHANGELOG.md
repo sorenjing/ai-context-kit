@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-- Added a standard AI Context Kit plugin manifest.
-- Moved `manage-ai-context` to the canonical `skills/` directory and kept it in Python package artifacts.
-- Documented the staged path from the local plugin to a GitHub-backed web MVP and optional remote MCP synchronization.
+## 0.2.0 - Unreleased
+
+- Add deterministic, review-before-commit GitHub publication bundles and index.
+- Add a read-only GitHub-backed MCP server with `list_projects`, `get_context`, and `get_freshness`.
+- Add the portable Agent Plugins manifest, container deployment, and web MVP deployment guide.
+- Keep local context collection offline and require explicit publication.
+
+- Add a standard and portable AI Context Kit plugin manifest.
+- Keep `manage-ai-context` in the canonical `skills/` directory and Python package artifacts.
 
 All notable changes to AI Context Kit are documented here. The project follows semantic versioning after the first published release.
 

@@ -32,11 +32,11 @@ AI Context Kit gives the workspace one shared context entry point. The CLI owns 
 
 AI Context Kit is the **shared context layer**. It can be used alongside reusable Agent Skills and repository-local rules without depending on either one. See [Agent Skills integration](docs/integrations/agent-skills.md) for the runtime composition and responsibility boundaries.
 
-## Plugin status
+## Plugin and web status
 
 The repository now contains a standard plugin manifest and exposes `manage-ai-context` from the canonical `skills/` directory. The Stage 1 plugin packages workflow guidance around the local `aictx` CLI; it does not claim that a ChatGPT web session can read files from your computer.
 
-Web access requires an explicitly synchronized context source and a deployable MCP service. The recommended path is a read-only GitHub-backed MVP before any hosted synchronization service. See [Plugin architecture and web roadmap](docs/plugin-architecture.md) for the component boundaries, capability matrix, and delivery stages.
+The repository also includes the complete read-only GitHub-backed MCP implementation and a container deployment. `aictx publish github` creates a local, reviewable publication tree; it never uploads or pushes it. ChatGPT web access becomes active only after that tree is committed to GitHub and the MCP container is deployed at a stable HTTPS URL. See [GitHub-backed web MVP](docs/github-web-mvp.md) for the exact data flow and deployment boundary, and [Plugin architecture](docs/plugin-architecture.md) for the wider design.
 
 ## Install
 
@@ -100,6 +100,7 @@ Commands:
 - `aictx check`: validate project-memory markers and adapter presence.
 - `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
 - `aictx export harness <project> --format json --output -`: print a versioned, local `ContextBundle v1` for an AI development harness.
+- `aictx publish github <project>`: write a deterministic, commit-ready bundle and index to `.ai/published` for explicit review.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
 
@@ -149,7 +150,7 @@ The CLI has no networking code and needs no API key. It reads recognized manifes
 
 Freshness is deliberately narrow: `current` means these observed inputs have not changed since the last render. Source code or business behavior outside that scope may still require direct inspection.
 
-Version 0.1 deliberately has no model integration, vector database, daemon, hooks, or automatic business-level summaries. Its only JSON handoff is the explicit local `ContextBundle v1` export for harness integration. The included Codex Skill teaches Codex to maintain the manual memory block after meaningful work.
+Version 0.2 deliberately has no model integration, vector database, background daemon, hooks, or automatic business-level summaries. Network access exists only in the optional read-only MCP server; local collection, update, export, and publication preparation remain offline. The included Skill teaches agents to maintain the manual block and requires explicit review before publication.
 
 ## Install the Codex Skill
 

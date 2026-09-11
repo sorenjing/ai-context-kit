@@ -13,6 +13,7 @@ from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
 from .facts import extract_facts
 from .harness_export import build_harness_bundle
+from .publish import publish_bundle
 from .render import (
     MarkerError,
     render_chatgpt_project_context,
@@ -72,6 +73,13 @@ def _parser() -> argparse.ArgumentParser:
     export.add_argument("--workspace", type=Path)
     export.add_argument("--output", type=Path)
     export.add_argument("--format")
+    publish = subparsers.add_parser(
+        "publish", description="Create a reviewable directory for explicit remote publication."
+    )
+    publish.add_argument("target", choices=("github",))
+    publish.add_argument("project")
+    publish.add_argument("--workspace", type=Path)
+    publish.add_argument("--output", type=Path)
     return parser
 
 
@@ -250,6 +258,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                     raise ConfigError("harness export requires --format json")
                 _export_harness_context(root, args.project, args.output)
                 return 0
+        if args.command == "publish":
+            destination = args.output or root / ".ai" / "published"
+            if not destination.is_absolute():
+                destination = root / destination
+            output = publish_bundle(root, args.project, destination)
+            print(f"published {output}; review and commit the directory to GitHub")
+            return 0
     except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:
         print(f"error: {exc}")
         return 2
