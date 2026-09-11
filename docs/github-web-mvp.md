@@ -10,7 +10,7 @@ This mode gives ChatGPT and other remote MCP clients read-only access to context
 4. The MCP service reads `index.json`, then only the bundle path declared for the requested project.
 5. ChatGPT calls `list_projects`, `get_context`, or `get_freshness` through the deployed streamable HTTP endpoint.
 
-The publication tree is intentionally ordinary JSON:
+The publication tree uses ordinary JSON:
 
 ```text
 .ai-context/
@@ -66,7 +66,7 @@ Build `Dockerfile` on a platform that supports streaming HTTP and secret managem
 4. Add `.app.json` mapping that registered ID and reference it from the OpenAI plugin extension before distribution.
 5. Replace `mcp.example.json` with root `mcp.json` containing the real stable URL before public packaging.
 
-The repository deliberately does not commit a placeholder `mcp.json` or fabricated `.app.json`: either would make an installable plugin point at a nonexistent service. Deployment, domain verification, and the ChatGPT-generated technical ID require an actual hosting account and cannot be completed from source code alone.
+Root `mcp.json` and `.app.json` are deployment-specific files. Add them after the MCP service has a stable HTTPS endpoint, domain verification is complete, and ChatGPT has issued the technical ID; until then, use `mcp.example.json` as the configuration reference.
 
 ## Tool contract
 
