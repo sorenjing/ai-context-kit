@@ -32,11 +32,11 @@ AI Context Kit gives the workspace one shared context entry point. The CLI owns 
 
 AI Context Kit is the **shared context layer**. It can be used alongside reusable Agent Skills and repository-local rules without depending on either one. See [Agent Skills integration](docs/integrations/agent-skills.md) for the runtime composition and responsibility boundaries.
 
-## Plugin and web status
+## Plugin and web access
 
-The repository now contains a standard plugin manifest and exposes `manage-ai-context` from the canonical `skills/` directory. The Stage 1 plugin packages workflow guidance around the local `aictx` CLI; it does not claim that a ChatGPT web session can read files from your computer.
+The standard plugin package exposes `manage-ai-context` from the canonical `skills/` directory and delegates deterministic local work to the `aictx` CLI.
 
-The repository also includes the complete read-only GitHub-backed MCP implementation and a container deployment. `aictx publish github` creates a local, reviewable publication tree; it never uploads or pushes it. ChatGPT web access becomes active only after that tree is committed to GitHub and the MCP container is deployed at a stable HTTPS URL. See [GitHub-backed web MVP](docs/github-web-mvp.md) for the exact data flow and deployment boundary, and [Plugin architecture](docs/plugin-architecture.md) for the wider design.
+For ChatGPT web access, the repository includes a read-only GitHub-backed MCP server and container deployment. Exported context becomes available after the reviewed publication tree is committed to GitHub and the MCP server is deployed at a stable HTTPS URL. See [GitHub-backed web MVP](docs/github-web-mvp.md) for setup and [Plugin architecture](docs/plugin-architecture.md) for the wider design.
 
 ## Install
 
@@ -48,7 +48,7 @@ Before the first PyPI release, install directly from the repository:
 pipx install git+https://github.com/sorenjing/ai-context-kit.git
 ```
 
-After a release is visible on PyPI, `pipx install ai-context-kit` becomes the preferred command. The repository currently prepares version 0.1.0 but does not claim it has already been published.
+After the first PyPI release, `pipx install ai-context-kit` will become the preferred command. The current version is installed directly from GitHub.
 
 For local development:
 
@@ -148,9 +148,9 @@ Malformed markers are an error. An existing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md
 
 The CLI has no networking code and needs no API key. It reads recognized manifests, a bounded README excerpt, Git metadata, and directory names. Each generated project file records this observation scope. The CLI does not read ordinary source bodies, follow directory symlinks, or scan common secret files.
 
-Freshness is deliberately narrow: `current` means these observed inputs have not changed since the last render. Source code or business behavior outside that scope may still require direct inspection.
+A `current` freshness label means the recorded observation inputs have not changed since the last render. Source code and behavior outside that scope still require direct inspection.
 
-Version 0.2 deliberately has no model integration, vector database, background daemon, hooks, or automatic business-level summaries. Network access exists only in the optional read-only MCP server; local collection, update, export, and publication preparation remain offline. The included Skill teaches agents to maintain the manual block and requires explicit review before publication.
+The local workflow remains deterministic and offline. Optional network access is isolated to the read-only MCP server, while model integration, vector search, background synchronization, and automatic business-level summaries remain outside the current release. The included Skill maintains the manual block and requires review before publication.
 
 ## Install the Codex Skill
 
