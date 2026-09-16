@@ -13,6 +13,7 @@ from .config import ConfigError, find_workspace, load_config
 from .discovery import discover_projects
 from .facts import extract_facts
 from .harness_export import build_harness_bundle
+from .evolvetrace_client import submit_task
 from .locking import workspace_write_lock
 from .publish import publish_bundle
 from .render import (
@@ -32,6 +33,8 @@ from .state import (
     load_state,
     write_state,
 )
+from .task_contracts import ContextReceipt, TaskEnvelope
+from .task_workspace import prepare_task
 
 
 CONFIG_TEMPLATE = """version = 1
@@ -81,6 +84,18 @@ def _parser() -> argparse.ArgumentParser:
     publish.add_argument("project")
     publish.add_argument("--workspace", type=Path)
     publish.add_argument("--output", type=Path)
+    task = subparsers.add_parser("task", description="Prepare or submit a context-aware task.")
+    task_commands = task.add_subparsers(dest="task_command", required=True)
+    prepare = task_commands.add_parser("prepare")
+    prepare.add_argument("project")
+    prepare.add_argument("--intent", required=True)
+    prepare.add_argument("--platform", default="codex")
+    prepare.add_argument("--skill", action="append", default=[])
+    prepare.add_argument("--workspace", type=Path)
+    submit = task_commands.add_parser("submit")
+    submit.add_argument("task_id")
+    submit.add_argument("--evolvetrace-url", required=True)
+    submit.add_argument("--workspace", type=Path)
     return parser
 
 
@@ -273,6 +288,56 @@ def main(argv: Sequence[str] | None = None) -> int:
             with workspace_write_lock(root):
                 output = publish_bundle(root, args.project, destination)
             print(f"published {output}; review and commit the directory to GitHub")
+            return 0
+        if args.command == "task" and args.task_command == "prepare":
+            prepared = prepare_task(
+                root,
+                args.project,
+                intent=args.intent,
+                platform=args.platform,
+                skill_ids=tuple(args.skill),
+            )
+            print(f"Task ID: {prepared.envelope.task_id}")
+            print(f"Bundle ID: {prepared.bundle['bundle_id']}")
+            print(f"Artifacts: {prepared.task_directory.as_posix()}")
+            return 0
+        if args.command == "task" and args.task_command == "submit":
+            if Path(args.task_id).name != args.task_id:
+                raise ConfigError("invalid task_id")
+            directory = root / ".ai" / "tasks" / args.task_id
+            envelope_payload = json.loads((directory / "envelope.json").read_text(encoding="utf-8"))
+            bundle = json.loads((directory / "bundle.json").read_text(encoding="utf-8"))
+            receipt_payload = json.loads((directory / "receipt.json").read_text(encoding="utf-8"))
+            envelope = TaskEnvelope(**envelope_payload)
+            receipt = ContextReceipt(
+                **{
+                    **receipt_payload,
+                    "delivered_source_ids": tuple(receipt_payload["delivered_source_ids"]),
+                    "loaded_skill_ids": tuple(receipt_payload["loaded_skill_ids"]),
+                }
+            )
+            result = submit_task(
+                args.evolvetrace_url,
+                envelope=envelope,
+                bundle=bundle,
+                receipt=receipt,
+            )
+            if not result.completed:
+                print(f"observability incomplete for Task ID: {args.task_id}")
+                return 0
+            _atomic_text(
+                directory / "receipt.json",
+                json.dumps(
+                    result.delivered_receipt.to_dict(),
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+            )
+            print(f"submitted Task ID: {result.task_id}")
+            print(f"Snapshot ID: {result.snapshot_id}")
+            print(f"Receipt ID: {result.receipt_id}")
             return 0
     except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:
         print(f"error: {exc}")
