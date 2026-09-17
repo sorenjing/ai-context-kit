@@ -2,8 +2,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from threading import Thread
 
-from ai_context_kit.evolvetrace_client import submit_task
-from ai_context_kit.task_contracts import ContextReceipt, TaskEnvelope
+from ai_context_kit.evolvetrace_client import build_task_payload, submit_task
+from ai_context_kit.task_contracts import AcceptanceCriterion, ContextReceipt, TaskEnvelope, TaskEnvelopeV2
+
+
+def test_v2_payload_preserves_structured_contract() -> None:
+    criterion = AcceptanceCriterion.from_dict({"criterion_id":"tests","type":"command_exit_zero","required":True,"description":"Tests pass","config":{"command":"python -m pytest -q"}})
+    envelope = TaskEnvelopeV2.create(task_id="task-2", target_project="demo", target_repositories=("projects/demo",), intent="Verify", requested_by="human", platform="codex", constraints=("Keep compatibility",), acceptance_criteria=(criterion,))
+    payload = build_task_payload(envelope, "snapshot-1", ["projects/demo"])
+    assert payload["acceptance_criteria"] == [criterion.to_dict()]
+    assert payload["target_repositories"] == ["projects/demo"]
 
 
 def test_submit_task_uses_existing_harness_contracts_in_order() -> None:

@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 from .config import ConfigError
-from .task_contracts import ContextReceipt, TaskEnvelope
+from .task_contracts import ContextReceipt, TaskEnvelope, TaskEnvelopeV2
 
 
 @dataclass(frozen=True)
@@ -50,10 +50,27 @@ def _post(origin: str, path: str, payload: dict[str, Any]) -> dict[str, Any]:
     return value
 
 
+def build_task_payload(envelope: TaskEnvelope | TaskEnvelopeV2, snapshot_id: str, repository_paths: list[str]) -> dict[str, Any]:
+    if isinstance(envelope, TaskEnvelopeV2):
+        if list(envelope.target_repositories) != repository_paths:
+            raise ConfigError("task repositories must match the context bundle")
+        constraints = list(envelope.constraints)
+        criteria = [item.to_dict() for item in envelope.acceptance_criteria]
+        repositories = list(envelope.target_repositories)
+    else:
+        constraints = ["Use only the task-bound context sources"]
+        criteria = ["Produce deterministic verification evidence"]
+        repositories = repository_paths
+    return {"task_id": envelope.task_id, "title": envelope.intent, "goal": envelope.intent,
+            "target_repositories": repositories, "constraints": constraints,
+            "acceptance_criteria": criteria, "open_questions": [], "risk_level": "normal",
+            "status": "ready", "context_snapshot_id": snapshot_id}
+
+
 def submit_task(
     base_url: str,
     *,
-    envelope: TaskEnvelope,
+    envelope: TaskEnvelope | TaskEnvelopeV2,
     bundle: dict[str, Any],
     receipt: ContextReceipt,
 ) -> SubmissionResult:
@@ -65,22 +82,7 @@ def submit_task(
             raise ConfigError("EvolveTrace response omitted snapshot_id")
         repositories = bundle.get("repositories", [])
         repository_paths = [str(item["relative_path"]) for item in repositories]
-        task = _post(
-            origin,
-            "/harness/tasks",
-            {
-                "task_id": envelope.task_id,
-                "title": envelope.intent,
-                "goal": envelope.intent,
-                "target_repositories": repository_paths,
-                "constraints": ["Use only the task-bound context sources"],
-                "acceptance_criteria": ["Produce deterministic verification evidence"],
-                "open_questions": [],
-                "risk_level": "normal",
-                "status": "ready",
-                "context_snapshot_id": snapshot_id,
-            },
-        )
+        task = _post(origin, "/harness/tasks", build_task_payload(envelope, snapshot_id, repository_paths))
         task_id = str(task.get("task_id", ""))
         if task_id != envelope.task_id:
             raise ConfigError("EvolveTrace returned a mismatched task_id")

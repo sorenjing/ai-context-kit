@@ -11,7 +11,7 @@ from .discovery import discover_projects
 from .facts import extract_facts
 from .render import _automatic, _manual_content, slugify
 from .state import classify_projects, load_state
-from .task_contracts import TaskEnvelope, canonical_digest
+from .task_contracts import TaskEnvelope, TaskEnvelopeV2, canonical_digest
 
 
 SCHEMA_VERSION = "context-bundle/v1"
@@ -41,18 +41,28 @@ def build_harness_bundle(
     project_name: str,
     *,
     generated_at: datetime | None = None,
-    task: TaskEnvelope | None = None,
+    task: TaskEnvelope | TaskEnvelopeV2 | None = None,
     skill_ids: tuple[str, ...] = (),
+    repository_paths: tuple[str, ...] | None = None,
 ) -> dict[str, object]:
     """Build one immutable, portable context bundle from bounded observations."""
 
     root = workspace.resolve()
     facts = _select_project(root, project_name)
+    selected_facts = [facts]
+    if repository_paths is not None:
+        config_for_discovery = load_config(root)
+        by_path = {item.project.relative_path: item for item in (extract_facts(project, config_for_discovery) for project in discover_projects(config_for_discovery))}
+        try:
+            selected_facts = [by_path[_relative_path(path)] for path in repository_paths]
+        except KeyError as exc:
+            raise ConfigError(f"unknown target repository: {exc.args[0]}") from exc
     memory_path = root / ".ai" / "projects" / f"{slugify(facts.project.name)}.md"
     global_path = root / ".ai" / "GLOBAL.md"
     project_memory = memory_path.read_text(encoding="utf-8") if memory_path.exists() else None
     global_context = global_path.read_text(encoding="utf-8") if global_path.exists() else ""
-    freshness = classify_projects([facts], load_state(root))[facts.project.name]
+    freshness_states = classify_projects(selected_facts, load_state(root))
+    freshness = freshness_states[facts.project.name]
     timestamp = generated_at or datetime.now(timezone.utc)
     if timestamp.tzinfo is None:
         raise ValueError("generated_at must include a timezone")
@@ -84,17 +94,20 @@ def build_harness_bundle(
         "project": facts.project.name,
         "generated_at": timestamp.isoformat(),
         "freshness": freshness,
-        "observed_scope": [path.as_posix() for path in facts.scanned_files],
-        "repositories": [
-            {
-                "name": facts.project.name,
-                "relative_path": _relative_path(facts.project.relative_path),
-            }
-        ],
+        "observed_scope": [f"{item.project.relative_path}/{path.as_posix()}" for item in selected_facts for path in item.scanned_files],
+        "repositories": [{"name": item.project.name, "relative_path": _relative_path(item.project.relative_path)} for item in selected_facts],
         "context": {
             "automatic": _automatic(facts).strip(),
             "manual": _manual_content(project_memory).strip(),
             "global": global_context.strip(),
+            "related_projects": {
+                item.project.name: {
+                    "automatic": _automatic(item).strip(),
+                    "manual": _manual_content((root / ".ai" / "projects" / f"{slugify(item.project.name)}.md").read_text(encoding="utf-8") if (root / ".ai" / "projects" / f"{slugify(item.project.name)}.md").exists() else None).strip(),
+                    "freshness": freshness_states[item.project.name],
+                }
+                for item in selected_facts if item.project.name != facts.project.name
+            },
         },
     }
     if task is not None:

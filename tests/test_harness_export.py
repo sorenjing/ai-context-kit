@@ -121,3 +121,15 @@ def test_context_source_must_stay_inside_workspace(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="workspace-relative"):
         build_harness_bundle(tmp_path, "demo")
+
+
+def test_task_bundle_can_include_two_target_repositories(tmp_path: Path) -> None:
+    make_workspace(tmp_path)
+    other = tmp_path / "projects" / "other"
+    other.mkdir()
+    (other / ".git").mkdir()
+    (other / "pyproject.toml").write_text('[project]\nname = "other"\n')
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    bundle = build_harness_bundle(tmp_path, "demo", repository_paths=("projects/demo", "projects/other"))
+    assert [item["relative_path"] for item in bundle["repositories"]] == ["projects/demo", "projects/other"]
+    assert "related_projects" in bundle["context"]

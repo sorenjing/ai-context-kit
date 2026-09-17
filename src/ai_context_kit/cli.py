@@ -33,7 +33,7 @@ from .state import (
     load_state,
     write_state,
 )
-from .task_contracts import ContextReceipt, TaskEnvelope
+from .task_contracts import ContextReceipt, task_envelope_from_dict
 from .task_workspace import prepare_task
 
 
@@ -91,6 +91,7 @@ def _parser() -> argparse.ArgumentParser:
     prepare.add_argument("--intent", required=True)
     prepare.add_argument("--platform", default="codex")
     prepare.add_argument("--skill", action="append", default=[])
+    prepare.add_argument("--contract", type=Path)
     prepare.add_argument("--workspace", type=Path)
     submit = task_commands.add_parser("submit")
     submit.add_argument("task_id")
@@ -290,12 +291,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"published {output}; review and commit the directory to GitHub")
             return 0
         if args.command == "task" and args.task_command == "prepare":
+            contract = None
+            if args.contract is not None:
+                try:
+                    contract = json.loads(args.contract.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    raise ConfigError(f"invalid task contract file: {exc}") from exc
+                if not isinstance(contract, dict):
+                    raise ConfigError("task contract file must contain an object")
             prepared = prepare_task(
                 root,
                 args.project,
                 intent=args.intent,
                 platform=args.platform,
                 skill_ids=tuple(args.skill),
+                contract=contract,
             )
             print(f"Task ID: {prepared.envelope.task_id}")
             print(f"Bundle ID: {prepared.bundle['bundle_id']}")
@@ -308,7 +318,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             envelope_payload = json.loads((directory / "envelope.json").read_text(encoding="utf-8"))
             bundle = json.loads((directory / "bundle.json").read_text(encoding="utf-8"))
             receipt_payload = json.loads((directory / "receipt.json").read_text(encoding="utf-8"))
-            envelope = TaskEnvelope(**envelope_payload)
+            try:
+                envelope = task_envelope_from_dict(envelope_payload)
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from exc
             receipt = ContextReceipt(
                 **{
                     **receipt_payload,

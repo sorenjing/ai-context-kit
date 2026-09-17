@@ -104,7 +104,8 @@ Commands:
 - `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
 - `aictx export harness <project> --format json --output -`: print a versioned, local `ContextBundle v1` for an AI development harness.
 - `aictx publish github <project>`: write a deterministic, commit-ready bundle and index to `.ai/published` for explicit review.
-- `aictx task prepare <project> --intent <text> --platform codex`: create a task-bound envelope, bundle, receipt, and handoff under `.ai/tasks/`.
+- `aictx task prepare <project> --intent <text> --platform codex`: create a v1 task-bound envelope, bundle, receipt, and handoff under `.ai/tasks/`.
+- `aictx task prepare <project> --intent <text> --contract examples/task-contract-v2.json`: create a v2 envelope with reviewed repository scope, constraints, and structured acceptance criteria.
 - `aictx task submit <task-id> --evolvetrace-url http://127.0.0.1:8000`: send those contracts to an optional loopback EvolveTrace instance.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
@@ -134,6 +135,22 @@ aictx export harness my-project --format json --output -
 The command emits `context-bundle/v1` with the selected project, generation time, freshness state, bounded observation scope, workspace-relative repository identifier, and automatic/manual/shared context. It performs no network requests and does not mutate the workspace when `--output -` is used.
 
 Task-bound exports add stable source identifiers, content digests, selected Skill identifiers, and a `ContextReceipt`. Receipt levels are deliberately narrow: `delivered` records transport, `acknowledged` records execution binding, and neither claims that a model understood or followed the context. EvolveTrace submission is optional and fail-open when the local evidence sink is unavailable; schema rejection remains an explicit error.
+
+For a multi-repository task, prepare a reviewed contract before submitting it:
+
+```bash
+aictx task prepare example-api \
+  --intent "Keep the API and UI contract aligned" \
+  --platform codex \
+  --contract examples/task-contract-v2.json
+
+aictx task submit <task-id> \
+  --evolvetrace-url http://127.0.0.1:8000
+```
+
+The v2 contract is validated before any task artifact is written. Repository paths must be workspace-relative, criterion IDs must be unique, and criterion configuration must match its type. The selected repositories are exported in one bounded Context Bundle, and the EvolveTrace client transports the constraints and criteria unchanged.
+
+AI Context Kit authors, validates, and delivers this contract; it does not execute checks or claim that a criterion passed. EvolveTrace owns observable execution evidence, deterministic evaluation, and the human review decision. Existing task artifacts without `--contract` remain `task-envelope/v1` and retain their legacy submission behavior.
 
 ## Context ownership
 

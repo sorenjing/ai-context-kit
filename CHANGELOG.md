@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add `task-envelope/v2` with reviewed multi-repository scope, constraints, and structured acceptance criteria.
+- Add `aictx task prepare --contract <path>` with atomic validation and a public-safe example contract.
+- Preserve v1 task compatibility while transporting v2 criteria unchanged to EvolveTrace.
 - Add provider-neutral Task Envelopes and monotonic Context Receipts.
 - Add atomic task-bound context artifacts with bounded, explicit source references.
 - Add optional, loopback-only, fail-open EvolveTrace submission.

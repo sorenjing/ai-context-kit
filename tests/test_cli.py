@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import shutil
 
 import pytest
@@ -203,6 +204,16 @@ def test_task_prepare_prints_ids_and_relative_paths(tmp_path: Path, capsys) -> N
     assert "Bundle ID:" in output
     assert ".ai/tasks/" in output
     assert str(tmp_path) not in output
+
+
+def test_task_prepare_accepts_reviewed_contract_file(tmp_path: Path) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    contract = tmp_path / "contract.json"
+    contract.write_text(json.dumps({"target_repositories":["projects/demo"],"constraints":[],"acceptance_criteria":[{"criterion_id":"tests","type":"command_exit_zero","required":True,"description":"Tests pass","config":{"command":"python -m pytest -q"}}]}), encoding="utf-8")
+    assert main(["task","prepare","demo","--intent","Verify","--contract",str(contract),"--workspace",str(tmp_path)]) == 0
+    envelope_path = next((tmp_path / ".ai/tasks").iterdir()) / "envelope.json"
+    assert json.loads(envelope_path.read_text())["schema"] == "task-envelope/v2"
 
 
 def test_task_submit_is_fail_open_when_evidence_sink_is_unavailable(

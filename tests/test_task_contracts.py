@@ -3,9 +3,12 @@ from datetime import datetime, timezone
 import pytest
 
 from ai_context_kit.task_contracts import (
+    AcceptanceCriterion,
     ContextReceipt,
     TaskEnvelope,
+    TaskEnvelopeV2,
     canonical_digest,
+    task_envelope_from_dict,
 )
 
 
@@ -94,3 +97,22 @@ def test_receipt_advances_one_observable_claim_at_a_time() -> None:
 
 def test_canonical_digest_is_key_order_independent() -> None:
     assert canonical_digest({"b": 2, "a": 1}) == canonical_digest({"a": 1, "b": 2})
+
+
+def test_v2_envelope_serializes_structured_acceptance_contract() -> None:
+    criterion = AcceptanceCriterion.from_dict({"criterion_id":"tests","type":"command_exit_zero","required":True,"description":"Tests pass","config":{"command":"python -m pytest -q"}})
+    envelope = TaskEnvelopeV2.create(task_id="task-2", target_project="demo", target_repositories=("projects/demo",), intent="Verify change", requested_by="human", platform="codex", constraints=("Keep compatibility",), acceptance_criteria=(criterion,), created_at=datetime(2026, 9, 17, tzinfo=timezone.utc))
+    payload = envelope.to_dict()
+    assert payload["schema"] == "task-envelope/v2"
+    assert payload["acceptance_criteria"][0]["criterion_id"] == "tests"
+    assert task_envelope_from_dict(payload) == envelope
+
+
+@pytest.mark.parametrize("payload", [
+    {"criterion_id":"x","type":"unknown","required":True,"description":"x","config":{}},
+    {"criterion_id":"x","type":"file_exists","required":True,"description":"x","config":{"path":"../secret"}},
+    {"criterion_id":"x","type":"path_scope","required":True,"description":"x","config":{"allowed_prefixes":[r"C:\\private"]}},
+])
+def test_criterion_rejects_invalid_values(payload) -> None:
+    with pytest.raises(ValueError):
+        AcceptanceCriterion.from_dict(payload)
