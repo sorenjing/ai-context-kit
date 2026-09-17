@@ -185,6 +185,50 @@ def test_check_reports_modified_adapter_contents(tmp_path: Path, capsys) -> None
     assert "adapter" in capsys.readouterr().out.lower()
 
 
+def test_task_prepare_prints_ids_and_relative_paths(tmp_path: Path, capsys) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    assert main([
+        "task", "prepare", "demo",
+        "--intent", "Refresh project view",
+        "--platform", "codex",
+        "--skill", "public-content-safety",
+        "--workspace", str(tmp_path),
+    ]) == 0
+
+    output = capsys.readouterr().out
+    assert "Task ID:" in output
+    assert "Bundle ID:" in output
+    assert ".ai/tasks/" in output
+    assert str(tmp_path) not in output
+
+
+def test_task_submit_is_fail_open_when_evidence_sink_is_unavailable(
+    tmp_path: Path, capsys
+) -> None:
+    make_workspace(tmp_path)
+    assert main(["init", "--workspace", str(tmp_path)]) == 0
+    capsys.readouterr()
+    assert main([
+        "task", "prepare", "demo",
+        "--intent", "Refresh project view",
+        "--platform", "codex",
+        "--workspace", str(tmp_path),
+    ]) == 0
+    task_id = next((tmp_path / ".ai/tasks").iterdir()).name
+    capsys.readouterr()
+
+    assert main([
+        "task", "submit", task_id,
+        "--evolvetrace-url", "http://127.0.0.1:1",
+        "--workspace", str(tmp_path),
+    ]) == 0
+
+    assert "observability incomplete" in capsys.readouterr().out
+
+
 def test_publish_github_creates_commit_ready_directory(tmp_path: Path, capsys) -> None:
     make_workspace(tmp_path)
     assert main(["init", "--workspace", str(tmp_path)]) == 0

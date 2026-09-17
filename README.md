@@ -104,6 +104,8 @@ Commands:
 - `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
 - `aictx export harness <project> --format json --output -`: print a versioned, local `ContextBundle v1` for an AI development harness.
 - `aictx publish github <project>`: write a deterministic, commit-ready bundle and index to `.ai/published` for explicit review.
+- `aictx task prepare <project> --intent <text> --platform codex`: create a task-bound envelope, bundle, receipt, and handoff under `.ai/tasks/`.
+- `aictx task submit <task-id> --evolvetrace-url http://127.0.0.1:8000`: send those contracts to an optional loopback EvolveTrace instance.
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
 
@@ -131,6 +133,8 @@ aictx export harness my-project --format json --output -
 
 The command emits `context-bundle/v1` with the selected project, generation time, freshness state, bounded observation scope, workspace-relative repository identifier, and automatic/manual/shared context. It performs no network requests and does not mutate the workspace when `--output -` is used.
 
+Task-bound exports add stable source identifiers, content digests, selected Skill identifiers, and a `ContextReceipt`. Receipt levels are deliberately narrow: `delivered` records transport, `acknowledged` records execution binding, and neither claims that a model understood or followed the context. EvolveTrace submission is optional and fail-open when the local evidence sink is unavailable; schema rejection remains an explicit error.
+
 ## Context ownership
 
 Project files have two marked blocks. The CLI replaces only the automatic block:
@@ -149,7 +153,7 @@ Malformed markers are an error. An existing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md
 
 ## Privacy and limitations
 
-The CLI has no networking code and needs no API key. It reads recognized manifests, a bounded README excerpt, Git metadata, and directory names. Each generated project file records this observation scope. The CLI does not read ordinary source bodies, follow directory symlinks, or scan common secret files.
+Core discovery, rendering, and export stay offline and need no API key. The only networked CLI path is explicit `task submit`, restricted to loopback EvolveTrace URLs. The toolkit reads recognized manifests, a bounded README excerpt, Git metadata, directory names, and context sources explicitly allowlisted in `.aictx.toml`; it records digests and workspace-relative identifiers rather than copying unrestricted source archives. It does not follow directory symlinks or scan common secret files.
 
 A `current` freshness label means the recorded observation inputs have not changed since the last render. Source code and behavior outside that scope still require direct inspection.
 

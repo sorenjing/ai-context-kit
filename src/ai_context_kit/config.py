@@ -32,10 +32,13 @@ class Config:
     include: tuple[str, ...] = (".",)
     exclude: tuple[str, ...] = DEFAULT_EXCLUDES
     project_names: dict[str, str] | None = None
+    context_sources: dict[str, tuple[str, ...]] | None = None
 
     def __post_init__(self) -> None:
         if self.project_names is None:
             object.__setattr__(self, "project_names", {})
+        if self.context_sources is None:
+            object.__setattr__(self, "context_sources", {})
 
 
 def find_workspace(start: Path) -> Path:
@@ -71,10 +74,18 @@ def load_config(root: Path) -> Config:
 
     discovery = data.get("discovery", {})
     projects = data.get("projects", {})
-    if not isinstance(discovery, dict) or not isinstance(projects, dict):
-        raise ConfigError("discovery and projects must be tables")
+    context_sources = data.get("context_sources", {})
+    if not all(isinstance(value, dict) for value in (discovery, projects, context_sources)):
+        raise ConfigError("discovery, projects, and context_sources must be tables")
     if not all(isinstance(key, str) and isinstance(value, str) for key, value in projects.items()):
         raise ConfigError("project names must map paths to strings")
+    parsed_context_sources = {
+        key: _string_tuple(value, f"context_sources.{key}")
+        for key, value in context_sources.items()
+        if isinstance(key, str)
+    }
+    if len(parsed_context_sources) != len(context_sources):
+        raise ConfigError("context source project names must be strings")
 
     return Config(
         root=root.resolve(),
@@ -82,4 +93,5 @@ def load_config(root: Path) -> Config:
         include=_string_tuple(discovery.get("include", ["."]), "discovery.include"),
         exclude=_string_tuple(discovery.get("exclude", list(DEFAULT_EXCLUDES)), "discovery.exclude"),
         project_names=dict(projects),
+        context_sources=parsed_context_sources,
     )

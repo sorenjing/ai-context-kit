@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add provider-neutral Task Envelopes and monotonic Context Receipts.
+- Add atomic task-bound context artifacts with bounded, explicit source references.
+- Add optional, loopback-only, fail-open EvolveTrace submission.
 - Serialize mutating CLI commands with a cross-platform workspace file lock.
 - Bound MCP in-flight GitHub reads, request duration, and response size.
 - Document the local process model, multi-worker sizing, and failure guarantees.
