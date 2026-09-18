@@ -15,6 +15,8 @@ from .facts import extract_facts
 from .harness_export import build_harness_bundle
 from .evolvetrace_client import submit_task
 from .locking import workspace_write_lock
+from .pack_install import PackInstaller
+from .personal_pack import PersonalAIPack
 from .publish import publish_bundle
 from .render import (
     MarkerError,
@@ -63,12 +65,25 @@ def _parser() -> argparse.ArgumentParser:
     for name in ("init", "scan", "status", "check"):
         command = subparsers.add_parser(name)
         command.add_argument("--workspace", type=Path)
+        if name == "status":
+            command.add_argument("--pack-target", type=Path)
         if name == "init":
             command.add_argument("--dry-run", action="store_true")
     update = subparsers.add_parser("update")
     update.add_argument("project", nargs="?")
     update.add_argument("--workspace", type=Path)
     update.add_argument("--dry-run", action="store_true")
+    update.add_argument("--manifest", type=Path)
+    update.add_argument("--target", type=Path)
+    setup = subparsers.add_parser("setup", description="Validate a Personal AI Pack manifest.")
+    setup.add_argument("--manifest", type=Path, required=True)
+    install = subparsers.add_parser("install", description="Install managed platform adapters.")
+    install.add_argument("--manifest", type=Path, required=True)
+    install.add_argument("--target", type=Path, required=True)
+    doctor = subparsers.add_parser("doctor", description="Diagnose a Personal AI Pack installation.")
+    doctor.add_argument("--target", type=Path, required=True)
+    uninstall = subparsers.add_parser("uninstall", description="Remove only managed pack files.")
+    uninstall.add_argument("--target", type=Path, required=True)
     export = subparsers.add_parser(
         "export", description="Create a portable context handoff for a supported target."
     )
@@ -218,6 +233,37 @@ def _export_harness_context(root: Path, selected: str, output: Path | None) -> N
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.command == "setup":
+            pack = PersonalAIPack.load(args.manifest)
+            print(f"personal AI pack is valid: {pack.pack_id}")
+            return 0
+        if args.command in {"install", "uninstall", "doctor"}:
+            installer = PackInstaller(args.target)
+            if args.command == "install":
+                pack = PersonalAIPack.load(args.manifest)
+                installer.install(pack, args.manifest)
+                print(f"installed personal AI pack: {pack.pack_id}")
+                return 0
+            if args.command == "uninstall":
+                installer.uninstall()
+                print("uninstalled managed personal AI pack files")
+                return 0
+            findings = installer.doctor()
+            if findings:
+                print("\n".join(findings))
+                return 1
+            print("personal AI pack installation is valid")
+            return 0
+        if args.command == "status" and args.pack_target is not None:
+            print(json.dumps(PackInstaller(args.pack_target).status(), sort_keys=True))
+            return 0
+        if args.command == "update" and (args.manifest is not None or args.target is not None):
+            if args.manifest is None or args.target is None:
+                raise ConfigError("pack update requires both --manifest and --target")
+            pack = PersonalAIPack.load(args.manifest)
+            PackInstaller(args.target).install(pack, args.manifest)
+            print(f"updated personal AI pack: {pack.pack_id}")
+            return 0
         root = _root(args.workspace, initializing=args.command == "init")
         if args.command == "init":
             if args.dry_run:
@@ -352,7 +398,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Snapshot ID: {result.snapshot_id}")
             print(f"Receipt ID: {result.receipt_id}")
             return 0
-    except (ConfigError, MarkerError, ManagedFileError, OSError) as exc:
+    except (ConfigError, MarkerError, ManagedFileError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}")
         return 2
     return 2

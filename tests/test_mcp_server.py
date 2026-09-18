@@ -2,7 +2,12 @@ import asyncio
 
 import pytest
 
-from ai_context_kit.mcp_server import InFlightLimit, _store_from_environment, create_server
+from ai_context_kit.mcp_server import (
+    InFlightLimit,
+    _pack_status_from_environment,
+    _store_from_environment,
+    create_server,
+)
 
 
 def test_store_configuration_comes_from_explicit_environment(monkeypatch) -> None:
@@ -32,7 +37,9 @@ def test_server_uses_current_mcp_sdk() -> None:
     assert isinstance(create_server(), MCPServer)
 
     tools = asyncio.run(create_server().list_tools())
-    assert [tool.name for tool in tools] == ["list_projects", "get_context", "get_freshness"]
+    assert [tool.name for tool in tools] == [
+        "list_projects", "get_context", "get_freshness", "get_pack_status"
+    ]
     assert all(tool.annotations.read_only_hint for tool in tools)
 
 
@@ -43,3 +50,25 @@ def test_in_flight_limit_rejects_excess_work_instead_of_waiting_forever() -> Non
         with pytest.raises(RuntimeError, match="busy"):
             with limit.slot():
                 pytest.fail("request exceeded the in-flight limit")
+
+
+def test_pack_status_exposes_only_allowlisted_installation_metadata(tmp_path, monkeypatch) -> None:
+    state = tmp_path / "state.json"
+    state.write_text(
+        '{"schema":"personal-ai-pack-installation/v1","pack":{"schema":"personal-ai-pack/v1",'
+        '"id":"example","version":1,"platforms":["codex"]},"managed_files":'
+        '{"generated/openai/plugin.json":"abc"},"private_path":"/secret"}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AICTX_PACK_STATE", str(state))
+
+    assert _pack_status_from_environment() == {
+        "schema": "personal-ai-pack-installation/v1",
+        "pack": {
+            "schema": "personal-ai-pack/v1",
+            "id": "example",
+            "version": 1,
+            "platforms": ["codex"],
+        },
+        "managed_file_count": 1,
+    }

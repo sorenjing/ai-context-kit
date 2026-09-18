@@ -72,6 +72,7 @@ def test_delivered_receipt_requires_a_source_identifier() -> None:
             status="delivered",
             delivered_source_ids=(),
             loaded_skill_ids=(),
+            execution_profile_id=None,
         )
 
 
@@ -86,11 +87,13 @@ def test_receipt_advances_one_observable_claim_at_a_time() -> None:
         status="delivered",
         delivered_source_ids=("source-1",),
         loaded_skill_ids=("skill-1",),
+        execution_profile_id="codex-local",
     )
 
     acknowledged = receipt.advance("acknowledged")
     assert acknowledged.status == "acknowledged"
     assert acknowledged.delivered_source_ids == ("source-1",)
+    assert acknowledged.execution_profile_id == "codex-local"
     with pytest.raises(ValueError, match="one level"):
         acknowledged.advance("effective")
 

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
 import os
+from pathlib import Path
 import threading
 from typing import Iterator
 
@@ -45,6 +47,29 @@ def _store_from_environment() -> GitHubBundleStore:
     )
 
 
+def _pack_status_from_environment() -> dict[str, object]:
+    path = os.environ.get("AICTX_PACK_STATE")
+    if not path:
+        raise RuntimeError("AICTX_PACK_STATE is required")
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("schema") != "personal-ai-pack-installation/v1":
+        raise RuntimeError("unsupported Personal AI Pack installation state")
+    pack = payload.get("pack")
+    managed = payload.get("managed_files")
+    if not isinstance(pack, dict) or not isinstance(managed, dict):
+        raise RuntimeError("invalid Personal AI Pack installation state")
+    return {
+        "schema": "personal-ai-pack-installation/v1",
+        "pack": {
+            "schema": pack.get("schema"),
+            "id": pack.get("id"),
+            "version": pack.get("version"),
+            "platforms": list(pack.get("platforms", [])),
+        },
+        "managed_file_count": len(managed),
+    }
+
+
 def create_server():
     from mcp.server.mcpserver import MCPServer
 
@@ -77,6 +102,11 @@ def create_server():
         """Get export time, freshness label, and bounded observation scope for a project."""
         with limit.slot():
             return _store_from_environment().get_freshness(project)
+
+    @server.tool(annotations={"readOnlyHint": True, "openWorldHint": False})
+    def get_pack_status() -> dict[str, object]:
+        """Get allowlisted installation metadata without source bodies or local paths."""
+        return _pack_status_from_environment()
 
     return server
 

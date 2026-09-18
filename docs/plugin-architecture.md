@@ -93,3 +93,19 @@ This stage must preserve:
 ## Why this split
 
 Keeping collection local makes observation deterministic and auditable. Keeping the Skill thin avoids duplicating CLI behavior in prompts. Adding remote access only behind an explicit exported bundle gives web clients useful context without turning AI Context Kit into an unrestricted source-code crawler or prematurely operating a multi-tenant storage service.
+
+## Personal AI Pack boundary
+
+`personal-ai-pack/v1` adds installation and distribution without changing context
+authority. A private manifest selects sources, platforms, and safety policy. The CLI
+generates one shared OpenAI plugin payload for Codex and ChatGPT and records only
+allowlisted installation metadata and digests.
+
+Common assets remain provider-neutral. Platform paths, invocation syntax, MCP
+registration, hooks, and capability reports are generated adapter data. Provider and
+model identity belongs to an `execution-profile/v1` evidence snapshot, not canonical
+knowledge.
+
+The read-only `get_pack_status` tool reads an explicitly configured
+`AICTX_PACK_STATE` and returns only pack identity, version, platforms, and managed file
+count. It does not expose source definitions, manifest paths, or credentials.

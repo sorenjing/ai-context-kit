@@ -250,3 +250,32 @@ def test_publish_github_creates_commit_ready_directory(tmp_path: Path, capsys) -
     assert (tmp_path / ".ai/published/index.json").exists()
     assert (tmp_path / ".ai/published/projects/demo.json").exists()
     assert "review and commit" in capsys.readouterr().out
+
+
+def test_pack_lifecycle_commands_require_explicit_manifest_and_target(
+    tmp_path: Path, capsys
+) -> None:
+    from test_personal_pack import valid_pack, write_pack
+
+    manifest = write_pack(tmp_path / "pack.json", valid_pack())
+    target = tmp_path / "installed"
+
+    assert main(["setup", "--manifest", str(manifest)]) == 0
+    assert "valid" in capsys.readouterr().out
+    assert main(["install", "--manifest", str(manifest), "--target", str(target)]) == 0
+    assert main(["status", "--pack-target", str(target)]) == 0
+    output = capsys.readouterr().out
+    assert "example-personal-ai" in output
+    assert str(tmp_path) not in output
+    assert main(["doctor", "--target", str(target)]) == 0
+
+    plugin = target / ".aictx-pack/generated/openai/plugin.json"
+    plugin.write_text("{}\n", encoding="utf-8")
+    assert main(["doctor", "--target", str(target)]) == 1
+    assert "digest mismatch" in capsys.readouterr().out
+
+    assert main([
+        "update", "--manifest", str(manifest), "--target", str(target)
+    ]) == 0
+    assert main(["uninstall", "--target", str(target)]) == 0
+    assert not (target / ".aictx-pack").exists()

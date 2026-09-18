@@ -110,6 +110,25 @@ Commands:
 
 Use `--workspace PATH` from outside the workspace. Mutating commands support `--dry-run`.
 
+## Install a Personal AI Pack
+
+A Personal AI Pack is a private manifest that references context and Skill authorities
+without embedding their content in the public plugin:
+
+```bash
+aictx setup --manifest personal-ai-pack.yaml
+aictx install --manifest personal-ai-pack.yaml --target ~/.local/share/aictx
+aictx status --pack-target ~/.local/share/aictx
+aictx doctor --target ~/.local/share/aictx
+aictx update --manifest personal-ai-pack.yaml --target ~/.local/share/aictx
+aictx uninstall --target ~/.local/share/aictx
+```
+
+The state stores only pack identity, enabled platforms, managed relative paths, and
+digests. It never stores the manifest location, credentials, private source bodies, or
+local repository paths. The repository includes only a synthetic example at
+`examples/personal-ai-pack.example.json`.
+
 ## Use with ChatGPT Projects
 
 AI Context Kit can generate a compact project handoff for ChatGPT Projects:
@@ -192,6 +211,16 @@ aictx status
 ```
 
 项目变化后先运行 `aictx status`，再用 `aictx update <项目名> --dry-run` 审阅更新，确认后去掉 `--dry-run`。人工记忆只能写在 `manual` 标记区内，CLI 不会覆盖该区域。
+
+私人资产包使用显式 Manifest 安装，不需要每次粘贴统一入口提示词：
+
+```powershell
+aictx setup --manifest personal-ai-pack.yaml
+aictx install --manifest personal-ai-pack.yaml --target "$env:LOCALAPPDATA\aictx"
+aictx doctor --target "$env:LOCALAPPDATA\aictx"
+```
+
+公开仓库只提供通用实现和合成示例；真实私人 Manifest 不应提交到本仓库。
 
 ## Development
 

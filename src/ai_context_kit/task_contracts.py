@@ -180,6 +180,7 @@ class ContextReceipt:
     status: DeliveryStatus
     delivered_source_ids: tuple[str, ...]
     loaded_skill_ids: tuple[str, ...]
+    execution_profile_id: str | None = None
 
     @classmethod
     def create(
@@ -194,6 +195,7 @@ class ContextReceipt:
         status: DeliveryStatus,
         delivered_source_ids: tuple[str, ...] | list[str],
         loaded_skill_ids: tuple[str, ...] | list[str],
+        execution_profile_id: str | None = None,
     ) -> ContextReceipt:
         if status not in ("generated", "delivered"):
             raise ValueError("initial status must be generated or delivered")
@@ -212,6 +214,10 @@ class ContextReceipt:
             status=status,
             delivered_source_ids=sources,
             loaded_skill_ids=skills,
+            execution_profile_id=(
+                _required(execution_profile_id, "execution_profile_id")
+                if execution_profile_id is not None else None
+            ),
         )
 
     def advance(self, next_status: DeliveryStatus) -> ContextReceipt:

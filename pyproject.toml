@@ -16,6 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
+dependencies = ["PyYAML>=6,<7"]
 
 [project.scripts]
 aictx = "ai_context_kit.cli:entrypoint"
