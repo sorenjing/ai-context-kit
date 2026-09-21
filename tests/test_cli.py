@@ -319,7 +319,7 @@ def test_pack_lifecycle_commands_require_explicit_manifest_and_target(
     assert main(["doctor", "--target", str(target)]) == 0
 
     plugin = target / ".aictx-pack/generated/openai/plugin.json"
-    original_plugin = plugin.read_text(encoding="utf-8")
+    original_plugin = plugin.read_bytes()
     plugin.write_text("{}\n", encoding="utf-8")
     assert main(["doctor", "--target", str(target)]) == 1
     assert "digest mismatch" in capsys.readouterr().out
@@ -328,7 +328,7 @@ def test_pack_lifecycle_commands_require_explicit_manifest_and_target(
         "update", "--manifest", str(manifest), "--target", str(target)
     ]) == 2
     assert "modified managed pack files" in capsys.readouterr().out
-    plugin.write_text(original_plugin, encoding="utf-8")
+    plugin.write_bytes(original_plugin)
     assert main([
         "update", "--manifest", str(manifest), "--target", str(target)
     ]) == 0

@@ -28,13 +28,13 @@ def test_install_status_doctor_update_and_uninstall_are_managed(tmp_path: Path) 
     assert installer.doctor() == []
 
     plugin = target / ".aictx-pack/generated/openai/plugin.json"
-    original_plugin = plugin.read_text(encoding="utf-8")
+    original_plugin = plugin.read_bytes()
     plugin.write_text("{}\n", encoding="utf-8")
     assert installer.doctor() == ["digest mismatch: generated/openai/plugin.json"]
 
     with pytest.raises(ManagedPackFileError):
         installer.install(pack, source)
-    plugin.write_text(original_plugin, encoding="utf-8")
+    plugin.write_bytes(original_plugin)
     installer.install(pack, source)
     assert installer.doctor() == []
     unrelated = target / "keep.txt"
