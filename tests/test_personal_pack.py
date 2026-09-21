@@ -33,6 +33,26 @@ def valid_pack() -> dict:
     }
 
 
+def valid_pack_v2() -> dict:
+    value = valid_pack()
+    value["schema"] = "personal-ai-pack/v2"
+    value["version"] = 2
+    value["entrypoints"] = {
+        "common": {"authority": "portfolio", "minimum_context": True},
+        "local": {
+            "discovery": {
+                "strategy": "bounded",
+                "max_depth": 3,
+                "workspace_env": "AICTX_WORKSPACE_ROOT",
+                "portfolio_env": "AICTX_PORTFOLIO_ROOT",
+            }
+        },
+        "codex": {"enabled": True},
+        "chatgpt": {"enabled": True},
+    }
+    return value
+
+
 def test_pack_loads_provider_neutral_manifest(tmp_path: Path) -> None:
     pack = PersonalAIPack.load(write_pack(tmp_path / "pack.json", valid_pack()))
     assert pack.pack_id == "example-personal-ai"
@@ -43,6 +63,43 @@ def test_pack_loads_provider_neutral_manifest(tmp_path: Path) -> None:
         "version": 1,
         "platforms": ["chatgpt", "codex"],
     }
+
+
+def test_v1_remains_compatible_without_entrypoints(tmp_path: Path) -> None:
+    pack = PersonalAIPack.load(write_pack(tmp_path / "v1.json", valid_pack()))
+    assert pack.schema == "personal-ai-pack/v1"
+    assert pack.entrypoints is None
+
+
+def test_v2_loads_strict_entrypoint_contract(tmp_path: Path) -> None:
+    pack = PersonalAIPack.load(write_pack(tmp_path / "v2.json", valid_pack_v2()))
+    assert pack.schema == "personal-ai-pack/v2"
+    assert pack.version == 2
+    assert pack.entrypoints is not None
+    assert pack.entrypoints.authority == "portfolio"
+    assert pack.entrypoints.minimum_context is True
+    assert pack.entrypoints.local.max_depth == 3
+    assert pack.entrypoints.codex_enabled is True
+    assert pack.entrypoints.chatgpt_enabled is True
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda value: value["entrypoints"]["local"]["discovery"].update(max_depth=-1),
+        lambda value: value["entrypoints"]["local"]["discovery"].update(max_depth=6),
+        lambda value: value["entrypoints"]["local"]["discovery"].update(max_depth=True),
+        lambda value: value["entrypoints"]["local"]["discovery"].update(strategy="recursive"),
+        lambda value: value["entrypoints"]["local"]["discovery"].update(workspace_env="HOME"),
+        lambda value: value["entrypoints"]["common"].update(extra=True),
+        lambda value: value["entrypoints"].update(extra={}),
+    ],
+)
+def test_v2_rejects_invalid_entrypoint_contract(tmp_path: Path, mutation) -> None:
+    payload = valid_pack_v2()
+    mutation(payload)
+    with pytest.raises(ValueError):
+        PersonalAIPack.load(write_pack(tmp_path / "pack.json", payload))
 
 
 @pytest.mark.parametrize(
@@ -79,4 +136,3 @@ def test_execution_profile_excludes_knowledge_and_secret_fields() -> None:
     assert profile.capabilities == ("mcp", "skills")
     with pytest.raises(ValueError, match="unknown"):
         ExecutionProfile.from_dict({**profile.to_dict(), "prompt": "private"})
-

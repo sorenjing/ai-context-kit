@@ -15,6 +15,16 @@ def test_skill_has_valid_trigger_and_cli_workflow() -> None:
     assert "TODO" not in text
 
 
+def test_skill_routes_unknown_workspaces_through_bounded_locate() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+
+    assert "aictx locate" in text
+    assert "ambiguous" in text.lower()
+    assert "unbounded" in text.lower()
+    assert "home directory" in text.lower()
+    assert "private repository names" in text.lower()
+
+
 def test_skill_has_codex_interface_metadata() -> None:
     metadata = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
 

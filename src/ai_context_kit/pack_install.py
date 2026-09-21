@@ -5,41 +5,24 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-import shutil
 from typing import Any
 
-from . import __version__
+from .entrypoints import render_pack_files
 from .personal_pack import PersonalAIPack
 from .state import _atomic_text
 
 
-def _digest(contents: str) -> str:
-    return hashlib.sha256(contents.encode("utf-8")).hexdigest()
+def _digest(contents: str | bytes) -> str:
+    encoded = contents.encode("utf-8") if isinstance(contents, str) else contents
+    return hashlib.sha256(encoded).hexdigest()
 
 
-def _render(pack: PersonalAIPack) -> dict[str, str]:
-    plugin = {
-        "name": "ai-context-kit",
-        "version": __version__,
-        "description": "Load bounded, source-traceable context on demand",
-        "skills": "./skills/",
-        "platforms": list(pack.enabled_platforms),
-        "mcp": {"server": "aictx-mcp", "readOnly": True},
-    }
-    skill = """---
-name: manage-ai-context
-description: Load the smallest source-traceable context bundle needed for a project task.
----
+class ManagedPackFileError(ValueError):
+    """A managed Pack asset changed outside the installer."""
 
-# Manage AI Context
-
-Resolve the target project, request bounded context through AI Context Kit, and report the
-bundle and source identifiers used. Never request the full private portfolio by default.
-"""
-    return {
-        "generated/openai/plugin.json": json.dumps(plugin, indent=2, sort_keys=True) + "\n",
-        "generated/openai/skills/manage-ai-context/SKILL.md": skill,
-    }
+    def __init__(self, paths: tuple[str, ...]):
+        self.paths = paths
+        super().__init__("modified managed pack files: " + ", ".join(paths))
 
 
 class PackInstaller:
@@ -50,7 +33,11 @@ class PackInstaller:
 
     def install(self, pack: PersonalAIPack, manifest_path: Path) -> dict[str, Any]:
         del manifest_path  # source location is intentionally never persisted
-        rendered = _render(pack)
+        rendered = render_pack_files(pack)
+        if self.state_path.exists():
+            modified = self._modified(self._state())
+            if modified:
+                raise ManagedPackFileError(modified)
         for relative, contents in rendered.items():
             _atomic_text(self.root / relative, contents)
         state = {
@@ -72,6 +59,14 @@ class PackInstaller:
     def status(self) -> dict[str, Any]:
         return self._state()
 
+    def _modified(self, state: dict[str, Any]) -> tuple[str, ...]:
+        modified: list[str] = []
+        for relative, expected in state["managed_files"].items():
+            path = self.root / relative
+            if path.exists() and _digest(path.read_bytes()) != expected:
+                modified.append(relative)
+        return tuple(sorted(modified))
+
     def doctor(self) -> list[str]:
         try:
             state = self._state()
@@ -82,12 +77,32 @@ class PackInstaller:
             path = self.root / relative
             if not path.exists():
                 findings.append(f"missing managed file: {relative}")
-            elif _digest(path.read_text(encoding="utf-8")) != expected:
+            elif _digest(path.read_bytes()) != expected:
                 findings.append(f"digest mismatch: {relative}")
         return findings
 
     def uninstall(self) -> None:
         if not self.root.exists():
             return
-        self._state()
-        shutil.rmtree(self.root)
+        state = self._state()
+        modified = self._modified(state)
+        if modified:
+            raise ManagedPackFileError(modified)
+        for relative in state["managed_files"]:
+            path = self.root / relative
+            if path.exists():
+                path.unlink()
+        self.state_path.unlink(missing_ok=True)
+        for directory in sorted(
+            (path for path in self.root.rglob("*") if path.is_dir()),
+            key=lambda path: len(path.parts),
+            reverse=True,
+        ):
+            try:
+                directory.rmdir()
+            except OSError:
+                pass
+        try:
+            self.root.rmdir()
+        except OSError:
+            pass

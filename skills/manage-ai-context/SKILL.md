@@ -18,6 +18,7 @@ Use `aictx` for deterministic project discovery, bounded metadata observations, 
 | Memory is verbose or outdated | Compact only the manual block; preserve decisions, constraints, commands, current state, and known issues |
 | The user requests remote or ChatGPT web access | Run `aictx publish github <project>`, have the user review the generated files, and publish only after explicit authorization |
 | A Personal AI Pack manifest is available | Run `aictx setup --manifest <path>`, install to an explicit target, then run `aictx doctor --target <target>` |
+| Workspace or Portfolio location is unknown | Run `aictx locate --manifest <path> --start <current-directory>`; stop and ask the user when the result is ambiguous or unresolved |
 
 ## Maintain semantic memory
 
@@ -53,5 +54,6 @@ Read the generated observation scope before relying on an automatic fact. Inspec
 - Never publish implicitly. Treat the generated bundle as potentially sensitive, require review, and use a dedicated repository or branch with the narrowest suitable access.
 - Remote MCP reads only bundle paths declared in the published index. Do not use it as a general repository browser.
 - Never copy a private Pack manifest or its source mappings into this public Skill. Load the smallest task-specific bundle through the installed adapter.
+- Never perform an unbounded scan of a home directory or embed private repository names in generated entrypoints. Delegate bounded discovery to `aictx locate`.
 
 If `aictx` is unavailable, report that dependency and provide the repository installation command. Do not recreate its update logic ad hoc.

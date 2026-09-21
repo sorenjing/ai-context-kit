@@ -5,6 +5,7 @@ import shutil
 import pytest
 
 from ai_context_kit.cli import main
+from test_personal_pack import valid_pack_v2, write_pack
 
 
 def test_version_uses_package_version(capsys) -> None:
@@ -186,6 +187,54 @@ def test_check_reports_modified_adapter_contents(tmp_path: Path, capsys) -> None
     assert "adapter" in capsys.readouterr().out.lower()
 
 
+def test_locate_prints_stable_json_and_writes_nothing(tmp_path: Path, capsys) -> None:
+    manifest = write_pack(tmp_path / "pack.json", valid_pack_v2())
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    portfolio = workspace / "private-portfolio"
+    portfolio.mkdir()
+    (portfolio / "registry.yaml").write_text("projects: {}\n", encoding="utf-8")
+    before = sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*"))
+
+    assert main(["locate", "--manifest", str(manifest), "--start", str(workspace), "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "resolved"
+    assert payload["source"] == "discovery"
+    assert payload["workspace_root"] == str(workspace)
+    assert payload["portfolio_root"] == str(portfolio)
+    assert payload["candidates"] == [str(portfolio)]
+    assert payload["findings"] == []
+    assert sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*")) == before
+    assert not (tmp_path / ".aictx-pack").exists()
+
+
+def test_locate_exit_codes_distinguish_unresolved_ambiguous_and_invalid(
+    tmp_path: Path, capsys
+) -> None:
+    manifest = write_pack(tmp_path / "pack.json", valid_pack_v2())
+    unresolved = tmp_path / "unresolved"
+    unresolved.mkdir()
+    (unresolved / ".aictx.toml").write_text("version = 1\n", encoding="utf-8")
+    assert main(["locate", "--manifest", str(manifest), "--start", str(unresolved)]) == 1
+    assert "unresolved" in capsys.readouterr().out
+
+    ambiguous = tmp_path / "ambiguous"
+    ambiguous.mkdir()
+    for name in ("a", "b"):
+        candidate = ambiguous / name / "private-portfolio"
+        candidate.mkdir(parents=True)
+        (candidate / "registry.yaml").write_text("projects: {}\n", encoding="utf-8")
+    assert main(["locate", "--manifest", str(manifest), "--start", str(ambiguous)]) == 1
+    assert "ambiguous" in capsys.readouterr().out
+
+    assert main([
+        "locate", "--manifest", str(manifest), "--start", str(tmp_path),
+        "--portfolio", str(tmp_path / "missing"), "--json",
+    ]) == 2
+    assert json.loads(capsys.readouterr().out)["status"] == "invalid"
+
+
 def test_task_prepare_prints_ids_and_relative_paths(tmp_path: Path, capsys) -> None:
     make_workspace(tmp_path)
     assert main(["init", "--workspace", str(tmp_path)]) == 0
@@ -270,10 +319,16 @@ def test_pack_lifecycle_commands_require_explicit_manifest_and_target(
     assert main(["doctor", "--target", str(target)]) == 0
 
     plugin = target / ".aictx-pack/generated/openai/plugin.json"
+    original_plugin = plugin.read_text(encoding="utf-8")
     plugin.write_text("{}\n", encoding="utf-8")
     assert main(["doctor", "--target", str(target)]) == 1
     assert "digest mismatch" in capsys.readouterr().out
 
+    assert main([
+        "update", "--manifest", str(manifest), "--target", str(target)
+    ]) == 2
+    assert "modified managed pack files" in capsys.readouterr().out
+    plugin.write_text(original_plugin, encoding="utf-8")
     assert main([
         "update", "--manifest", str(manifest), "--target", str(target)
     ]) == 0

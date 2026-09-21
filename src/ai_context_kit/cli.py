@@ -37,6 +37,7 @@ from .state import (
 )
 from .task_contracts import ContextReceipt, task_envelope_from_dict
 from .task_workspace import prepare_task
+from .workspace_discovery import DiscoveryResult, resolve_workspace
 
 
 CONFIG_TEMPLATE = """version = 1
@@ -84,6 +85,13 @@ def _parser() -> argparse.ArgumentParser:
     doctor.add_argument("--target", type=Path, required=True)
     uninstall = subparsers.add_parser("uninstall", description="Remove only managed pack files.")
     uninstall.add_argument("--target", type=Path, required=True)
+    locate = subparsers.add_parser("locate", description="Resolve a bounded local workspace.")
+    locate.add_argument("--manifest", type=Path, required=True)
+    locate.add_argument("--start", type=Path, default=Path.cwd())
+    locate.add_argument("--workspace", type=Path)
+    locate.add_argument("--portfolio", type=Path)
+    locate.add_argument("--local-override", type=Path)
+    locate.add_argument("--json", action="store_true")
     export = subparsers.add_parser(
         "export", description="Create a portable context handoff for a supported target."
     )
@@ -230,6 +238,34 @@ def _export_harness_context(root: Path, selected: str, output: Path | None) -> N
     print(f"exported harness context to {destination}")
 
 
+def _discovery_payload(result: DiscoveryResult) -> dict[str, object]:
+    return {
+        "status": result.status,
+        "source": result.source,
+        "workspace_root": str(result.workspace_root) if result.workspace_root else None,
+        "portfolio_root": str(result.portfolio_root) if result.portfolio_root else None,
+        "candidates": [str(path) for path in result.candidates],
+        "findings": list(result.findings),
+    }
+
+
+def _print_discovery(result: DiscoveryResult, *, as_json: bool) -> None:
+    payload = _discovery_payload(result)
+    if as_json:
+        print(json.dumps(payload, sort_keys=True))
+        return
+    print(f"status: {result.status}")
+    print(f"source: {result.source}")
+    if result.workspace_root:
+        print(f"workspace: {result.workspace_root}")
+    if result.portfolio_root:
+        print(f"portfolio: {result.portfolio_root}")
+    for candidate in result.candidates:
+        print(f"candidate: {candidate}")
+    for finding in result.findings:
+        print(f"finding: {finding}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
@@ -237,6 +273,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             pack = PersonalAIPack.load(args.manifest)
             print(f"personal AI pack is valid: {pack.pack_id}")
             return 0
+        if args.command == "locate":
+            pack = PersonalAIPack.load(args.manifest)
+            result = resolve_workspace(
+                start=args.start,
+                pack=pack,
+                workspace=args.workspace,
+                portfolio=args.portfolio,
+                local_override=args.local_override,
+            )
+            _print_discovery(result, as_json=args.json)
+            if result.status == "resolved":
+                return 0
+            return 2 if result.status == "invalid" else 1
         if args.command in {"install", "uninstall", "doctor"}:
             installer = PackInstaller(args.target)
             if args.command == "install":

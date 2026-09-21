@@ -101,6 +101,7 @@ Commands:
 - `aictx status`: report `new`, `stale`, `current`, or `missing` projects. `current` means the observed inputs match the last render; it does not guarantee that every project fact is complete or correct.
 - `aictx update [project]`: refresh all projects or one selected project.
 - `aictx check`: validate project-memory markers and adapter presence.
+- `aictx locate --manifest <path> --start <path> --json`: resolve a Personal AI Pack workspace and Portfolio through explicit paths, environment variables, a machine-local override, or bounded discovery.
 - `aictx export chatgpt-project <project>`: render a portable context file for upload to a matching ChatGPT Project.
 - `aictx export harness <project> --format json --output -`: print a versioned, local `ContextBundle v1` for an AI development harness.
 - `aictx publish github <project>`: write a deterministic, commit-ready bundle and index to `.ai/published` for explicit review.
@@ -128,6 +129,32 @@ The state stores only pack identity, enabled platforms, managed relative paths, 
 digests. It never stores the manifest location, credentials, private source bodies, or
 local repository paths. The repository includes only a synthetic example at
 `examples/personal-ai-pack.example.json`.
+
+The original `personal-ai-pack/v1` contract remains supported. Version 2 adds one
+shared entry policy and thin Local, Codex, and ChatGPT bootstrap/fallback entrypoints.
+It does not copy source mappings into generated files. Installed assets live below the
+explicit target's `.aictx-pack/generated/` directory and are covered by `doctor` digests.
+
+When repository locations differ between machines, resolve them without committing
+absolute paths:
+
+```bash
+export AICTX_WORKSPACE_ROOT=/path/to/workspace
+export AICTX_PORTFOLIO_ROOT=/path/to/private-portfolio
+aictx locate --manifest personal-ai-pack.yaml --start . --json
+```
+
+The precedence is explicit CLI arguments, `AICTX_` environment variables, an optional
+untracked `.aictx.local.toml`, bounded discovery, then an unresolved or ambiguous
+result. Discovery defaults to depth 3, does not follow directory symlinks, and excludes
+Git metadata, dependency, virtual-environment, build, coverage, and generated context
+directories. A tracked local override is rejected because it may contain private
+machine paths.
+
+Generated prompts are recovery and bootstrap assets, not a replacement for the Pack,
+Skill, MCP, repository rules, or current source inspection. ChatGPT still requires a
+deployed HTTPS MCP, an authorized GitHub Connector, or a reviewed Project handoff; the
+installer does not register those platform-side connections.
 
 ## Use with ChatGPT Projects
 

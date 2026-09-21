@@ -1,4 +1,6 @@
 .worktrees/
+.superpowers/
+.aictx.local.toml
 __pycache__/
 *.py[cod]
 .pytest_cache/

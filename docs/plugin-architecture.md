@@ -97,9 +97,11 @@ Keeping collection local makes observation deterministic and auditable. Keeping 
 ## Personal AI Pack boundary
 
 `personal-ai-pack/v1` adds installation and distribution without changing context
-authority. A private manifest selects sources, platforms, and safety policy. The CLI
-generates one shared OpenAI plugin payload for Codex and ChatGPT and records only
-allowlisted installation metadata and digests.
+authority. `personal-ai-pack/v2` retains that contract and adds a shared entry policy,
+bounded local-discovery configuration, and thin Local, Codex, and ChatGPT entrypoints.
+A private manifest selects sources, platforms, and safety policy. The CLI records only
+allowlisted installation metadata and digests; generated entrypoints never contain the
+private source map.
 
 Common assets remain provider-neutral. Platform paths, invocation syntax, MCP
 registration, hooks, and capability reports are generated adapter data. Provider and
@@ -109,3 +111,12 @@ knowledge.
 The read-only `get_pack_status` tool reads an explicitly configured
 `AICTX_PACK_STATE` and returns only pack identity, version, platforms, and managed file
 count. It does not expose source definitions, manifest paths, or credentials.
+
+Local resolution uses `aictx locate`. Explicit paths outrank `AICTX_` environment
+variables, which outrank an untracked machine-local override and bounded discovery.
+Ambiguous candidates are reported instead of guessed. Discovery does not follow
+directory symlinks or recursively scan a home directory without a bound.
+
+The generated Markdown files are bootstrap/fallback instructions. A capable runtime
+should normally invoke the installed Skill and MCP surface. In particular, generating
+a ChatGPT entrypoint does not deploy HTTPS MCP or register a ChatGPT connection.

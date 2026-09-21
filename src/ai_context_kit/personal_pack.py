@@ -5,10 +5,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path, PureWindowsPath
+import re
 from typing import Any, Mapping
 
 
 _SECRET_KEYS = {"authorization", "cookie", "password", "secret", "token"}
+_ENVIRONMENT_NAME = re.compile(r"AICTX_[A-Z0-9_]+\Z")
 
 
 def _required(value: object, name: str) -> str:
@@ -48,6 +50,64 @@ def _load_document(path: Path) -> dict[str, Any]:
 
 
 @dataclass(frozen=True)
+class DiscoveryConfig:
+    strategy: str
+    max_depth: int
+    workspace_env: str
+    portfolio_env: str
+
+
+@dataclass(frozen=True)
+class EntrypointConfig:
+    authority: str
+    minimum_context: bool
+    local: DiscoveryConfig
+    codex_enabled: bool
+    chatgpt_enabled: bool
+
+
+def _entrypoints(payload: object) -> EntrypointConfig:
+    if not isinstance(payload, dict) or set(payload) != {"common", "local", "codex", "chatgpt"}:
+        raise ValueError("entrypoint config fields are invalid")
+    common = payload["common"]
+    local = payload["local"]
+    codex = payload["codex"]
+    chatgpt = payload["chatgpt"]
+    if not isinstance(common, dict) or set(common) != {"authority", "minimum_context"}:
+        raise ValueError("common entrypoint fields are invalid")
+    if not isinstance(local, dict) or set(local) != {"discovery"}:
+        raise ValueError("local entrypoint fields are invalid")
+    if not isinstance(codex, dict) or set(codex) != {"enabled"}:
+        raise ValueError("codex entrypoint fields are invalid")
+    if not isinstance(chatgpt, dict) or set(chatgpt) != {"enabled"}:
+        raise ValueError("chatgpt entrypoint fields are invalid")
+    discovery = local["discovery"]
+    fields = {"strategy", "max_depth", "workspace_env", "portfolio_env"}
+    if not isinstance(discovery, dict) or set(discovery) != fields:
+        raise ValueError("discovery config fields are invalid")
+    if discovery["strategy"] != "bounded":
+        raise ValueError("discovery strategy must be bounded")
+    max_depth = discovery["max_depth"]
+    if isinstance(max_depth, bool) or not isinstance(max_depth, int) or not 0 <= max_depth <= 5:
+        raise ValueError("discovery max_depth must be an integer from 0 through 5")
+    workspace_env = _required(discovery["workspace_env"], "workspace_env")
+    portfolio_env = _required(discovery["portfolio_env"], "portfolio_env")
+    if not _ENVIRONMENT_NAME.fullmatch(workspace_env) or not _ENVIRONMENT_NAME.fullmatch(portfolio_env):
+        raise ValueError("discovery environment names must use the AICTX_ prefix")
+    if not isinstance(common["minimum_context"], bool):
+        raise ValueError("minimum_context must be boolean")
+    if not isinstance(codex["enabled"], bool) or not isinstance(chatgpt["enabled"], bool):
+        raise ValueError("entrypoint enabled flags must be boolean")
+    return EntrypointConfig(
+        authority=_required(common["authority"], "authority"),
+        minimum_context=common["minimum_context"],
+        local=DiscoveryConfig("bounded", max_depth, workspace_env, portfolio_env),
+        codex_enabled=codex["enabled"],
+        chatgpt_enabled=chatgpt["enabled"],
+    )
+
+
+@dataclass(frozen=True)
 class PersonalAIPack:
     schema: str
     pack_id: str
@@ -56,15 +116,25 @@ class PersonalAIPack:
     sources: dict[str, Any]
     platforms: dict[str, dict[str, Any]]
     policies: dict[str, Any]
+    entrypoints: EntrypointConfig | None = None
 
     @classmethod
     def load(cls, path: Path) -> "PersonalAIPack":
         payload = _load_document(path)
-        allowed = {"schema", "id", "version", "profile", "sources", "platforms", "policies"}
+        base_fields = {"schema", "id", "version", "profile", "sources", "platforms", "policies"}
+        schema = payload.get("schema")
+        if schema == "personal-ai-pack/v1":
+            allowed = base_fields
+            expected_version = 1
+        elif schema == "personal-ai-pack/v2":
+            allowed = base_fields | {"entrypoints"}
+            expected_version = 2
+        else:
+            raise ValueError("unsupported personal AI pack schema or version")
         if set(payload) != allowed:
             raise ValueError("pack manifest fields are invalid")
         _reject_unsafe(payload)
-        if payload["schema"] != "personal-ai-pack/v1" or payload["version"] != 1:
+        if payload["version"] != expected_version:
             raise ValueError("unsupported personal AI pack schema or version")
         for name in ("profile", "sources", "platforms", "policies"):
             if not isinstance(payload[name], dict):
@@ -86,13 +156,14 @@ class PersonalAIPack:
                 "adapter": _required(config["adapter"], "adapter"),
             }
         return cls(
-            "personal-ai-pack/v1",
+            schema,
             _required(payload["id"], "id"),
-            1,
+            expected_version,
             dict(payload["profile"]),
             dict(payload["sources"]),
             platforms,
             policies,
+            _entrypoints(payload["entrypoints"]) if expected_version == 2 else None,
         )
 
     @property
@@ -152,4 +223,3 @@ class ExecutionProfile:
         value = asdict(self)
         value["capabilities"] = list(self.capabilities)
         return value
-

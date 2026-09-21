@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add strict `personal-ai-pack/v2` entrypoint and bounded discovery configuration while preserving v1 manifests.
+- Generate one common entry policy with thin Local, Codex, and ChatGPT bootstrap/fallback adapters.
+- Add `aictx locate` with explicit, environment, untracked-local-override, and bounded-discovery precedence.
+- Refuse install, update, or uninstall when a managed Pack asset was modified outside the installer.
 - Add `task-envelope/v2` with reviewed multi-repository scope, constraints, and structured acceptance criteria.
 - Add `aictx task prepare --contract <path>` with atomic validation and a public-safe example contract.
 - Preserve v1 task compatibility while transporting v2 criteria unchanged to EvolveTrace.

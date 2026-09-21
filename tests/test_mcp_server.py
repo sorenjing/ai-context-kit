@@ -72,3 +72,24 @@ def test_pack_status_exposes_only_allowlisted_installation_metadata(tmp_path, mo
         },
         "managed_file_count": 1,
     }
+
+
+def test_v2_pack_status_excludes_sources_entrypoints_and_paths(tmp_path, monkeypatch) -> None:
+    state = tmp_path / "state.json"
+    state.write_text(
+        '{"schema":"personal-ai-pack-installation/v1","pack":{'
+        '"schema":"personal-ai-pack/v2","id":"example","version":2,'
+        '"platforms":["chatgpt","codex"],"sources":{"private":"hidden"},'
+        '"entrypoints":{"local":{"path":"/private/path"}}},'
+        '"managed_files":{"generated/common/entry-policy.md":"abc"},'
+        '"manifest_path":"/private/manifest"}',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AICTX_PACK_STATE", str(state))
+
+    result = _pack_status_from_environment()
+    rendered = str(result)
+    assert result["pack"]["schema"] == "personal-ai-pack/v2"
+    assert result["managed_file_count"] == 1
+    for forbidden in ("sources", "entrypoints", "/private", "manifest_path"):
+        assert forbidden not in rendered
