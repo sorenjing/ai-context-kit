@@ -230,6 +230,8 @@ Install the repository as a plugin, or copy/link `skills/manage-ai-context` into
 
 AI Context Kit 在本地维护一套 `.ai/` 共享上下文，让 Codex、Claude、Gemini 和 Cursor 不必反复分析同一批项目。它不会调用模型 API，也不会读取普通源代码正文。
 
+完整说明见 [中文使用手册](docs/zh-CN/usage.md)；需要判断 CLI 和工作区是否健康时，使用 [中文自测手册](docs/zh-CN/self-check.md)。
+
 ```powershell
 pipx install git+https://github.com/sorenjing/ai-context-kit.git
 aictx init --dry-run
