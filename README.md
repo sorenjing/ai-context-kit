@@ -10,6 +10,11 @@ No model API, cloud service, or vector database is required. The result is a sma
 
 The repository and its current files remain authoritative. AI Context Kit provides a reusable observation and memory layer; it does not replace source inspection or project rules.
 
+For a reproducible comparison against ordinary repository inspection, see the
+[context delivery evaluation procedure](docs/context-evaluation.md). It records
+source coverage and task checks without treating a delivered bundle as proof of
+model understanding.
+
 ## Why this exists
 
 AI assistants usually keep instructions at the project level, while related projects often live in a larger workspace. That creates two kinds of waste:
