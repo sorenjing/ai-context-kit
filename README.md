@@ -1,5 +1,7 @@
 # AI Context Kit
 
+> **Maintenance moved to [EvolveTrace/context](https://github.com/sorenjing/EvolveTrace/tree/master/context).** AI Context Kit remains an independently installable CLI within EvolveTrace. Use the [consolidated installation guide](https://github.com/sorenjing/EvolveTrace/blob/master/docs/consolidation.md) and the root EvolveTrace plugin for new installations. This repository retains the previous releases and history for compatibility and recovery; migration verification is in progress.
+
 [![CI](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sorenjing/ai-context-kit/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Auditable project context shared across AI coding tools.**
